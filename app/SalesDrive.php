@@ -168,7 +168,9 @@ class SalesDrive
      */
     private static function filterableFields(): array
     {
-        $raw = Env::str('SD_FILTERABLE_FIELDS', 'externalId');
+        // externalId — рядкове порівняння, id — діапазоном [from]/[to] (див. rangeFields).
+        // Обидва перевірено контрольними запитами й вони працюють, тож у дефолті — обидва.
+        $raw = Env::str('SD_FILTERABLE_FIELDS', 'externalId,id');
         return array_values(array_filter(array_map('trim', explode(',', $raw)), function ($v) {
             return $v !== '';
         }));
