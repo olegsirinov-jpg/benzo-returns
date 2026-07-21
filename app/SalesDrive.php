@@ -466,8 +466,9 @@ class SalesDrive
      */
     public static function appendStatusComment(array $rma, string $newStatus, ?string $comment): bool
     {
-        $text = '🔁 Повернення ' . $rma['rma_number']
-              . ' · ' . Dict::status($newStatus);
+        // Номер повернення пишемо один раз — при створенні (appendNewRmaComment).
+        // Тут лише сам новий статус, без повторення номера.
+        $text = '🔁 ' . Dict::status($newStatus);
 
         return self::appendComment((string)$rma['order_id_sd'], $text);
     }
