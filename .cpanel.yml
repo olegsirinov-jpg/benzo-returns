@@ -5,7 +5,7 @@ deployment:
     #   File Manager -> зайдіть у каталог субдомену returns -> угорі шлях,
     #   напр. /home/ВАШЛОГІН/returns.benzo-pila.in.ua
     # Замініть DEPLOYPATH нижче на цей шлях.
-    - export DEPLOYPATH=/home/ВАШЛОГІН/returns.benzo-pila.in.ua
+    - export DEPLOYPATH=public_html/benzo-returns
     - /bin/mkdir -p "$DEPLOYPATH"
 
     # Копіюємо код у каталог сайту. .env, uploads/ та storage/logs/ НЕ чіпаємо —
