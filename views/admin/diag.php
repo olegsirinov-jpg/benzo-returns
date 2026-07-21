@@ -12,10 +12,11 @@ $mask = function (string $s): string {
     return $len <= 12 ? str_repeat('•', $len) : substr($s, 0, 6) . str_repeat('•', 10) . substr($s, -4) . ' (' . $len . ' симв.)';
 };
 
-$url      = App\Env::str('SD_URL');
-$enabled  = App\Env::bool('SD_ENABLED', false);
-$apiKey   = App\Env::str('SD_API_KEY');
-$formKey  = App\Env::str('SD_FORM_KEY');
+// налаштування беруться з адмінки (база), з відкатом на .env
+$url      = App\Config::str('sd_url');
+$enabled  = App\Config::bool('sd_enabled', false);
+$apiKey   = App\Config::str('sd_api_key');
+$formKey  = App\Config::str('sd_form_key');
 $isPlaceholder = strpos($url, 'yourdomain') !== false;
 ?>
 
@@ -25,7 +26,7 @@ $isPlaceholder = strpos($url, 'yourdomain') !== false;
 </div>
 
 <div class="card mt16">
-    <div class="card__title">Поточні налаштування (.env)</div>
+    <div class="card__title">Поточні налаштування</div>
     <table class="kv">
         <tr>
             <td>SD_ENABLED</td>
@@ -72,10 +73,10 @@ $isPlaceholder = strpos($url, 'yourdomain') !== false;
 
 <?php if (!$enabled || $isPlaceholder): ?>
 <div class="alert alert--warn">
-    <strong>Спочатку виправте <code>.env</code>:</strong><br>
-    <?php if (!$enabled): ?>• <code>SD_ENABLED=1</code><br><?php endif; ?>
-    <?php if ($isPlaceholder): ?>• <code>SD_URL=https://<u>вашпіддомен</u>.salesdrive.me</code> — той самий домен, під яким ви заходите в CRM<br><?php endif; ?>
-    Після зміни .env оновіть цю сторінку.
+    <strong>Спочатку налаштуйте SalesDrive у <a href="<?= e(url('/admin/settings')) ?>">Налаштуваннях</a>:</strong><br>
+    <?php if (!$enabled): ?>• увімкніть інтеграцію (галка «Увімкнути SalesDrive»)<br><?php endif; ?>
+    <?php if ($isPlaceholder): ?>• впишіть адресу кабінету — той самий домен, під яким ви заходите в CRM<br><?php endif; ?>
+    Після збереження оновіть цю сторінку.
 </div>
 <?php endif; ?>
 
