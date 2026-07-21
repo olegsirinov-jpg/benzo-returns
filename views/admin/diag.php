@@ -58,15 +58,28 @@ $isPlaceholder = strpos($url, 'yourdomain') !== false;
                 <?php endif; ?>
             </td>
         </tr>
+        <?php $df = App\SalesDrive::debugFields(); ?>
         <tr>
-            <td>SD_ORDER_FIELDS</td>
+            <td>Поля пошуку номера</td>
             <td class="mono small">
-                <?= e(App\Env::str('SD_ORDER_FIELDS', 'externalId,id')) ?>
-                <div class="hint" style="margin-top:4px">
-                    Поля, у яких шукається номер. Якщо номер із Хорошопа лежить
-                    у кастомному полі — допишіть його сюди через кому.
-                </div>
+                <?= e(implode(', ', $df['order'])) ?>
+                <div class="hint" style="margin-top:4px">У яких полях шукається номер замовлення.</div>
             </td>
+        </tr>
+        <tr>
+            <td>Реально фільтруються</td>
+            <td class="mono small">
+                <?= e(implode(', ', $df['filterable'])) ?>
+                <?php if (!in_array('id', $df['filterable'], true)): ?>
+                    <br><span class="badge badge--red">немає «id» — номер SalesDrive не шукатиметься</span>
+                <?php else: ?>
+                    <span class="badge badge--green">✓ включно з id</span>
+                <?php endif; ?>
+            </td>
+        </tr>
+        <tr>
+            <td>Діапазоном [from]/[to]</td>
+            <td class="mono small"><?= e(implode(', ', $df['range'])) ?></td>
         </tr>
     </table>
 </div>

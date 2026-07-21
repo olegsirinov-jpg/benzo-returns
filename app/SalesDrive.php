@@ -197,6 +197,20 @@ class SalesDrive
     }
 
     /**
+     * Які поля реально використовує пошук (для діагностики).
+     *
+     * @return array{order:array<int,string>,filterable:array<int,string>,range:array<int,string>}
+     */
+    public static function debugFields(): array
+    {
+        return [
+            'order'      => self::orderFields(),
+            'filterable' => self::filterableFields(),
+            'range'      => self::rangeFields(),
+        ];
+    }
+
+    /**
      * @param array<string,mixed> $order
      */
     private static function orderNumberMatches(array $order, string $needle): bool
