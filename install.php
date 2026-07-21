@@ -86,11 +86,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $errors === []) {
         if ($errors === []) {
             try {
                 $sql = (string)file_get_contents(BASE_PATH . '/install/schema.sql');
-                foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
-                    if ($statement === '' || strpos($statement, '--') === 0) {
+                // Прибираємо рядки-коментарі ПЕРЕД розбиттям на команди,
+                // інакше коментар перед CREATE «зʼїдав» усю команду.
+                $lines = preg_split('/\r?\n/', $sql) ?: [];
+                $clean = [];
+                foreach ($lines as $line) {
+                    if (preg_match('/^\s*--/', $line)) {
                         continue;
                     }
-                    Db::pdo()->exec($statement);
+                    $clean[] = $line;
+                }
+                $sql = implode("\n", $clean);
+                foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
+                    if ($statement !== '') {
+                        Db::pdo()->exec($statement);
+                    }
                 }
 
                 if ((int)Db::value('SELECT COUNT(*) FROM users') === 0) {
