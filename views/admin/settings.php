@@ -110,6 +110,53 @@ $adminEmail = (string)(App\Auth::user()['email'] ?? '');
         </div>
     </div>
 
+    <!-- ==================== SalesDrive ==================== -->
+    <div class="card">
+        <div class="card__title">SalesDrive</div>
+        <p class="small muted">
+            Пошук замовлення за номером і телефоном + автоматичний коментар до замовлення при створенні заявки.
+        </p>
+
+        <label class="check">
+            <input type="checkbox" name="sd_enabled" value="1" <?= Config::bool('sd_enabled') ? 'checked' : '' ?>>
+            <span>Увімкнути інтеграцію з SalesDrive</span>
+        </label>
+
+        <div class="field mt16">
+            <label class="label" for="sd_url">Адреса кабінету SalesDrive</label>
+            <input class="input" type="text" id="sd_url" name="sd_url"
+                   value="<?= e(Config::str('sd_url')) ?>" placeholder="https://вашпіддомен.salesdrive.me">
+            <div class="hint">Той самий домен, під яким ви заходите в CRM.</div>
+        </div>
+
+        <div class="grid2">
+            <div class="field">
+                <label class="label" for="sd_api_key">API-ключ (читання заявок)</label>
+                <input class="input" type="password" id="sd_api_key" name="sd_api_key"
+                       placeholder="<?= Config::isSet('sd_api_key') ? '•••••••• (збережено)' : 'не задано' ?>"
+                       autocomplete="new-password">
+                <div class="hint">Установки → Інші сервіси → API → API-ключі.</div>
+            </div>
+            <div class="field">
+                <label class="label" for="sd_form_key">Ключ бази заявок (для коментарів)</label>
+                <input class="input" type="password" id="sd_form_key" name="sd_form_key"
+                       placeholder="<?= Config::isSet('sd_form_key') ? '•••••••• (збережено)' : 'не задано' ?>"
+                       autocomplete="new-password">
+                <div class="hint">Окремий ключ бази заявок. Потрібен лише для дозапису коментарів у замовлення.</div>
+            </div>
+        </div>
+
+        <div class="field mb0">
+            <label class="label" for="sd_search_days">За скільки днів шукати замовлення</label>
+            <input class="input" type="number" id="sd_search_days" name="sd_search_days"
+                   value="<?= e((string)Config::int('sd_search_days', 120)) ?>" style="max-width:140px">
+        </div>
+
+        <p class="small mb0" style="margin-top:12px">
+            <a href="<?= e(url('/admin/diag')) ?>">Перевірити зʼєднання й пошук замовлення →</a>
+        </p>
+    </div>
+
     <!-- ==================== Нова пошта ==================== -->
     <div class="card">
         <div class="card__title">Нова пошта — зворотні накладні</div>

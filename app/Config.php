@@ -37,6 +37,13 @@ class Config
             'sms_sender'        => ['env' => 'TURBOSMS_SMS_SENDER',    'type' => 'str',  'secret' => false],
             'sms_viber_sender'  => ['env' => 'TURBOSMS_VIBER_SENDER',  'type' => 'str',  'secret' => false],
 
+            // SalesDrive
+            'sd_enabled'        => ['env' => 'SD_ENABLED',     'type' => 'bool', 'secret' => false],
+            'sd_url'            => ['env' => 'SD_URL',         'type' => 'str',  'secret' => false],
+            'sd_api_key'        => ['env' => 'SD_API_KEY',     'type' => 'str',  'secret' => true],
+            'sd_form_key'       => ['env' => 'SD_FORM_KEY',    'type' => 'str',  'secret' => true],
+            'sd_search_days'    => ['env' => 'SD_SEARCH_DAYS', 'type' => 'int',  'secret' => false],
+
             // Нова пошта — зворотні накладні
             'np_enabled'        => ['env' => 'NP_ENABLED',        'type' => 'bool', 'secret' => false],
             'np_key1'           => ['env' => 'NP_KEY1',           'type' => 'str',  'secret' => true],

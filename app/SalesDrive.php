@@ -22,9 +22,9 @@ class SalesDrive
 
     public static function enabled(): bool
     {
-        return Env::bool('SD_ENABLED', false)
-            && Env::str('SD_API_KEY') !== ''
-            && Env::str('SD_URL') !== '';
+        return Config::bool('sd_enabled', false)
+            && Config::str('sd_api_key') !== ''
+            && Config::str('sd_url') !== '';
     }
 
     /**
@@ -464,7 +464,7 @@ class SalesDrive
         if (!self::enabled() || $orderId === '') {
             return false;
         }
-        $formKey = Env::str('SD_FORM_KEY');
+        $formKey = Config::str('sd_form_key');
         if ($formKey === '') {
             self::log('SD_FORM_KEY не заданий — коментар не відправлено');
             return false;
@@ -592,10 +592,10 @@ class SalesDrive
      */
     private static function request(string $method, string $path, array $payload = []): ?array
     {
-        $url = rtrim(Env::str('SD_URL'), '/') . $path;
+        $url = rtrim(Config::str('sd_url'), '/') . $path;
 
         $ch = curl_init();
-        $headers = ['Form-Api-Key: ' . Env::str('SD_API_KEY')];
+        $headers = ['Form-Api-Key: ' . Config::str('sd_api_key')];
 
         if ($method === 'GET') {
             $url .= '?' . http_build_query($payload);
@@ -652,7 +652,7 @@ class SalesDrive
      */
     public static function diagList(array $filter = [], int $limit = 1): array
     {
-        $base = rtrim(Env::str('SD_URL'), '/');
+        $base = rtrim(Config::str('sd_url'), '/');
         $url  = $base . '/api/order/list/?' . http_build_query([
             'page'   => 1,
             'limit'  => $limit,
@@ -662,7 +662,7 @@ class SalesDrive
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Form-Api-Key: ' . Env::str('SD_API_KEY')]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Form-Api-Key: ' . Config::str('sd_api_key')]);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_TIMEOUT, 25);
         $body = curl_exec($ch);
@@ -714,7 +714,7 @@ class SalesDrive
     public static function diagProbe(string $orderNumber, string $phone = ''): array
     {
         $needle = self::normalizeNumber($orderNumber);
-        $from   = date('Y-m-d', strtotime('-' . Env::int('SD_SEARCH_DAYS', 120) . ' days'));
+        $from   = date('Y-m-d', strtotime('-' . Config::int('sd_search_days', 120) . ' days'));
 
         // Пошук за телефоном — найцінніший варіант: не залежить від того,
         // як зветься поле з номером, і одразу дає обидва номери клієнта.
