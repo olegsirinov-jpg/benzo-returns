@@ -4,6 +4,10 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Пропускати перевірку сертифікатів (AutoSSL / Let's Encrypt) без обробки.
+    # Має бути ПЕРШИМ правилом, інакше видача SSL-сертифіката падає з 403.
+    RewriteRule "^\.well-known/" - [L]
+
     # захист службових каталогів і файлів
     RewriteRule ^(app|views|config|install|storage|cron)/ - [F,L]
     RewriteRule ^(\.env|composer\.(json|lock)) - [F,L]

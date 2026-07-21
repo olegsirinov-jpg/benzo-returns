@@ -6,6 +6,8 @@ deployment:
     # тому відносний шлях розклав би файли не туди.
     - export DEPLOYPATH=/home/obp90408/public_html/benzo-returns
     - /bin/mkdir -p "$DEPLOYPATH"
+    # каталог сайту має бути доступний веб-серверу (інакше 403, зокрема на .well-known)
+    - /bin/chmod 755 "$DEPLOYPATH"
 
     # Копіюємо код у каталог сайту.
     # .env, uploads/ та storage/logs/ виключені: їх немає в git, а --exclude
