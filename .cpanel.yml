@@ -1,15 +1,15 @@
 ---
 deployment:
   tasks:
-    # Каталог сайту субдомену returns. Уточніть точний шлях у cPanel:
-    #   File Manager -> зайдіть у каталог субдомену returns -> угорі шлях,
-    #   напр. /home/ВАШЛОГІН/returns.benzo-pila.in.ua
-    # Замініть DEPLOYPATH нижче на цей шлях.
-    - export DEPLOYPATH=public_html/benzo-returns
+    # Абсолютний шлях до каталогу сайту (Document Root субдомену returns).
+    # ВАЖЛИВО: тільки абсолютний — cPanel виконує задачі з папки репозиторію,
+    # тому відносний шлях розклав би файли не туди.
+    - export DEPLOYPATH=/home/obp90408/public_html/benzo-returns
     - /bin/mkdir -p "$DEPLOYPATH"
 
-    # Копіюємо код у каталог сайту. .env, uploads/ та storage/logs/ НЕ чіпаємо —
-    # їх немає в git, а --exclude захищає наявні на сервері від перезапису.
+    # Копіюємо код у каталог сайту.
+    # .env, uploads/ та storage/logs/ виключені: їх немає в git, а --exclude
+    # захищає наявні на сервері (ключі, фото клієнтів, логи) від видалення.
     - >
       /bin/rsync -a --delete
       --exclude='.git'
@@ -25,6 +25,9 @@ deployment:
       --exclude='storage/logs/'
       ./ "$DEPLOYPATH/"
 
-    # Гарантуємо каталоги для даних і права на запис
+    # Каталоги для даних + права на запис
     - /bin/mkdir -p "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
     - /bin/chmod -R 0775 "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
+
+    # Захисний .htaccess для uploads (блокує виконання скриптів), якщо його ще немає
+    - test -f "$DEPLOYPATH/uploads/.htaccess" || /bin/cp uploads/.htaccess "$DEPLOYPATH/uploads/.htaccess"
