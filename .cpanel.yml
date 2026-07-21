@@ -2,16 +2,12 @@
 deployment:
   tasks:
     # Абсолютний шлях до каталогу сайту (Document Root субдомену returns).
-    # ВАЖЛИВО: тільки абсолютний — cPanel виконує задачі з папки репозиторію,
-    # тому відносний шлях розклав би файли не туди.
     - export DEPLOYPATH=/home/obp90408/public_html/benzo-returns
     - /bin/mkdir -p "$DEPLOYPATH"
-    # каталог сайту має бути доступний веб-серверу (інакше 403, зокрема на .well-known)
     - /bin/chmod 755 "$DEPLOYPATH"
 
-    # Копіюємо код у каталог сайту.
-    # .env, uploads/ та storage/logs/ виключені: їх немає в git, а --exclude
-    # захищає наявні на сервері (ключі, фото клієнтів, логи) від видалення.
+    # Копіюємо код. .env, uploads/, storage/logs/ виключені: їх немає в git,
+    # а --exclude захищає наявні на сервері (ключі, фото, логи) від видалення.
     - >
       /bin/rsync -a --delete
       --exclude='.git'
@@ -27,9 +23,16 @@ deployment:
       --exclude='storage/logs/'
       ./ "$DEPLOYPATH/"
 
+    # Правильні права: каталоги 755, файли 644 (щоб Apache читав .htaccess та код).
+    - /bin/find "$DEPLOYPATH" -type d -exec /bin/chmod 755 {} +
+    - /bin/find "$DEPLOYPATH" -type f -not -name '.env' -exec /bin/chmod 644 {} +
+
     # Каталоги для даних + права на запис
     - /bin/mkdir -p "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
     - /bin/chmod -R 0775 "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
 
-    # Захисний .htaccess для uploads (блокує виконання скриптів), якщо його ще немає
+    # .env лишаємо приватним (секрети не мають бути читабельні іншим)
+    - "[ -f \"$DEPLOYPATH/.env\" ] && /bin/chmod 600 \"$DEPLOYPATH/.env\" || true"
+
+    # Захисний .htaccess для uploads, якщо його ще немає
     - test -f "$DEPLOYPATH/uploads/.htaccess" || /bin/cp uploads/.htaccess "$DEPLOYPATH/uploads/.htaccess"
