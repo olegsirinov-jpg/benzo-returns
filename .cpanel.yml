@@ -1,0 +1,30 @@
+---
+deployment:
+  tasks:
+    # Каталог сайту субдомену returns. Уточніть точний шлях у cPanel:
+    #   File Manager -> зайдіть у каталог субдомену returns -> угорі шлях,
+    #   напр. /home/ВАШЛОГІН/returns.benzo-pila.in.ua
+    # Замініть DEPLOYPATH нижче на цей шлях.
+    - export DEPLOYPATH=/home/ВАШЛОГІН/returns.benzo-pila.in.ua
+    - /bin/mkdir -p "$DEPLOYPATH"
+
+    # Копіюємо код у каталог сайту. .env, uploads/ та storage/logs/ НЕ чіпаємо —
+    # їх немає в git, а --exclude захищає наявні на сервері від перезапису.
+    - >
+      /bin/rsync -a --delete
+      --exclude='.git'
+      --exclude='.github'
+      --exclude='.cpanel.yml'
+      --exclude='.env'
+      --exclude='.env.example'
+      --exclude='install.php'
+      --exclude='install/'
+      --exclude='DEPLOY.md'
+      --exclude='README.md'
+      --exclude='uploads/'
+      --exclude='storage/logs/'
+      ./ "$DEPLOYPATH/"
+
+    # Гарантуємо каталоги для даних і права на запис
+    - /bin/mkdir -p "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
+    - /bin/chmod -R 0775 "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"

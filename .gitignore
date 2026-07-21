@@ -1,0 +1,10 @@
+.env
+/uploads/*
+!/uploads/.htaccess
+/storage/logs/*
+!/storage/logs/.gitkeep
+.idea/
+.vscode/
+*.log
+Thumbs.db
+.DS_Store

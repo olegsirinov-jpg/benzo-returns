@@ -1,0 +1,16 @@
+# Розгортання цього проєкту виконується через cPanel Git™ Version Control
+# (див. DEPLOY.md), а не через GitHub Actions.
+#
+# Цей workflow навмисно НЕ запускається автоматично — лишений як заглушка,
+# щоб не давати помилок CI. Якщо GitHub Actions вам не потрібен —
+# просто видаліть теку .github на своєму компʼютері.
+name: (не використовується — деплой через cPanel)
+
+on:
+  workflow_dispatch:   # тільки ручний запуск, автоматично не спрацьовує
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Деплой виконується через cPanel Git Version Control. Див. DEPLOY.md"

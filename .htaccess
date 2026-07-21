@@ -1,0 +1,48 @@
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # захист службових каталогів і файлів
+    RewriteRule ^(app|views|config|install|storage|cron)/ - [F,L]
+    RewriteRule ^(\.env|composer\.(json|lock)) - [F,L]
+
+    # усе інше -> index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "same-origin"
+</IfModule>
+
+<FilesMatch "^\.env">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Директиви php_value працюють лише під mod_php. Під PHP-FPM/CGI вони
+# викликають Internal Server Error, тому обгорнуті в IfModule.
+# Якщо у вас FPM — винесіть ці значення в php.ini або .user.ini:
+#   upload_max_filesize = 12M
+#   post_max_size = 60M
+#   max_file_uploads = 25
+<IfModule mod_php.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 60M
+    php_value max_file_uploads 25
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 60M
+    php_value max_file_uploads 25
+</IfModule>
