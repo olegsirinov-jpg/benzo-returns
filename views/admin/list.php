@@ -176,7 +176,12 @@ foreach ($advKeys as $k) {
                     </span>
                 </td>
                 <td class="small"><?= e($r['manager_name'] ?: '—') ?></td>
-                <td class="small mono"><?= e($r['return_ttn'] ?: '—') ?></td>
+                <td class="small mono">
+                    <?= e($r['return_ttn'] ?: '—') ?>
+                    <?php if (!empty($r['np_cost_alert'])): ?>
+                        <span class="badge badge--red" title="<?= e((string)$r['np_cost_note']) ?>">💸 оплата</span>
+                    <?php endif; ?>
+                </td>
                 <td class="small nowrap"><?= $r['refund_amount'] !== null ? money($r['refund_amount']) : money($r['total_amount']) ?></td>
                 <td class="small muted nowrap"><?= dt((string)$r['updated_at'], 'd.m H:i') ?></td>
             </tr>
