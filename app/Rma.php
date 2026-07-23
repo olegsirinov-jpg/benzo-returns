@@ -282,6 +282,63 @@ class Rma
     }
 
     /**
+     * Перевірити, чи клієнт оформив «Легке повернення» у застосунку НП.
+     * Якщо так — підтягуємо номер накладної як ТТН повернення.
+     *
+     * @return array{ok:bool,detected:bool,ttn:string}
+     */
+    public static function checkLightReturn(int $rmaId): array
+    {
+        $rma = self::find($rmaId);
+        if ($rma === null || empty($rma['np_original_ttn'])) {
+            return ['ok' => false, 'detected' => false, 'ttn' => ''];
+        }
+        // якщо ТТН повернення вже є (наша накладна чи ручна) — не чіпаємо
+        if (!empty($rma['return_ttn'])) {
+            return ['ok' => true, 'detected' => false, 'ttn' => ''];
+        }
+
+        $info = NovaPoshta::lightReturnInfo((string)$rma['np_original_ttn']);
+        if (!$info['found'] || $info['ttn'] === '') {
+            return ['ok' => true, 'detected' => false, 'ttn' => ''];
+        }
+
+        // клієнт оформив легке повернення сам
+        Db::update('rma', [
+            'return_ttn'          => $info['ttn'],
+            'ttn_source'          => 'light_return',
+            'carrier'             => 'novaposhta',
+            'light_return_reason' => $info['reason'] ?: null,
+            'updated_at'          => date('Y-m-d H:i:s'),
+        ], 'id = ?', [$rmaId]);
+
+        self::log($rmaId, 'ТТН повернення (Легке повернення НП)', null, $info['ttn'],
+            'Клієнт оформив Легке повернення' . ($info['reason'] !== '' ? '. Причина НП: ' . $info['reason'] : ''),
+            null, 'Система');
+        self::comment($rmaId,
+            'Клієнт оформив «Легке повернення» Нової пошти. ТТН: ' . $info['ttn']
+            . ($info['reason'] !== '' ? '. Причина, вказана в НП: ' . $info['reason'] : ''),
+            'system', 'Система');
+
+        // рухаємо статус у «в дорозі», якщо ще на етапі очікування
+        $st = (string)$rma['status'];
+        if (in_array($st, ['approved', 'waiting_customer_shipment', 'manager_review', 'new'], true)) {
+            self::setStatus($rmaId, 'in_transit');
+        }
+
+        try {
+            $fresh = self::find($rmaId);
+            if ($fresh !== null) {
+                Telegram::ttnAdded($fresh, $info['ttn']);
+            }
+        } catch (\Throwable $e) {
+            error_log('Telegram: ' . $e->getMessage());
+        }
+
+        return ['ok' => true, 'detected' => true, 'ttn' => $info['ttn']];
+    }
+
+    /**
      * Просунути статус лише вперед у ланцюгу доставки.
      */
     private static function advanceStatus(int $rmaId, string $current, string $target): void

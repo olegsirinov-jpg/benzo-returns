@@ -1160,6 +1160,7 @@ class AdminController
                 'refund_bank'    => $refund['bank'],
                 'shipping_payer' => Dict::defaultShippingPayer($reason),
                 'total_amount'   => $this->itemsTotalAdmin($items),
+                'np_original_ttn'=> $sdOrder !== null ? ($sdOrder['delivery_ttn'] ?? null) : null,
                 'manager_id'     => Auth::id(),
                 'source'         => 'manager',
                 'public_token'   => bin2hex(random_bytes(16)),
@@ -1301,6 +1302,14 @@ class AdminController
             Session::flash('error', 'Накладна вже створена. Спершу видаліть поточну.');
             Response::redirect('/admin/rma/' . $rmaId);
         }
+        if (!empty($rma['return_ttn'])) {
+            $src = (string)($rma['ttn_source'] ?? '');
+            $msg = $src === 'light_return'
+                ? 'Клієнт уже оформив «Легке повернення» (ТТН ' . $rma['return_ttn'] . '). Накладна магазину не потрібна.'
+                : 'ТТН повернення вже вказано (' . $rma['return_ttn'] . '). Спершу приберіть її у блоці «Доставка».';
+            Session::flash('error', $msg);
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
 
         $cityRef = trim((string)($_POST['city_ref'] ?? ''));
         $whRef   = trim((string)($_POST['wh_ref'] ?? ''));
@@ -1320,6 +1329,7 @@ class AdminController
         Db::update('rma', [
             'return_ttn' => $r['ttn'],
             'np_doc_ref' => $r['ref'],
+            'ttn_source' => 'our_np',
             'carrier'    => 'novaposhta',
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = ?', [$rmaId]);
@@ -1364,6 +1374,7 @@ class AdminController
         Db::update('rma', [
             'return_ttn' => null,
             'np_doc_ref' => null,
+            'ttn_source' => null,
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = ?', [$rmaId]);
         Session::flash('success', 'Накладну видалено.');

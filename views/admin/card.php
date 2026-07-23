@@ -439,6 +439,36 @@ $canReject = App\Workflow::canReject($status);
                         <button class="btn btn--sm btn--red" type="submit">Видалити накладну</button>
                     </form>
                 </div>
+            <?php elseif (!empty($rma['return_ttn'])): ?>
+                <?php
+                $src = (string)($rma['ttn_source'] ?? '');
+                $isLightSrc = $src === 'light_return';
+                ?>
+                <div class="alert <?= $isLightSrc ? 'alert--success' : 'alert--info' ?>" style="margin-top:0">
+                    <?php if ($isLightSrc): ?>
+                        Клієнт оформив <strong>«Легке повернення»</strong> Нової пошти.
+                        Створювати накладну магазину <strong>не потрібно</strong>.
+                    <?php else: ?>
+                        ТТН повернення вже вказано (<?= $src === 'manual' ? 'клієнтом вручну' : 'вручну' ?>).
+                        Створювати нову накладну магазину <strong>не потрібно</strong>.
+                    <?php endif; ?>
+                </div>
+                <table class="kv">
+                    <tr><td>ТТН повернення</td><td class="mono"><strong><?= e($rma['return_ttn']) ?></strong></td></tr>
+                    <tr><td>Перевізник</td><td><?= e(App\Dict::carriers()[(string)$rma['carrier']] ?? (string)$rma['carrier'] ?: 'Нова пошта') ?></td></tr>
+                    <?php if ($isLightSrc && !empty($rma['light_return_reason'])): ?>
+                        <tr><td>Причина (НП)</td><td><?= e($rma['light_return_reason']) ?></td></tr>
+                    <?php endif; ?>
+                    <?php if (!empty($rma['np_track_status'])): ?>
+                        <tr><td>Статус посилки</td><td>
+                            <?= e($rma['np_track_status']) ?>
+                            <div class="small muted">оновлено <?= dt((string)$rma['np_tracked_at']) ?></div>
+                        </td></tr>
+                    <?php endif; ?>
+                </table>
+                <p class="small muted mb0">
+                    Якщо потрібно все одно оформити накладну магазину — спершу приберіть ТТН у блоці «Доставка».
+                </p>
             <?php else: ?>
                 <p class="small muted">
                     Створіть зворотну накладну — клієнт віднесе товар на відділення НП за готовим номером.

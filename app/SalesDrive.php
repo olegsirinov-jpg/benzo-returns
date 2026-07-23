@@ -438,8 +438,32 @@ class SalesDrive
             'phone'         => $phone,
             'email'         => $emails[0] ?? '',
             'total'         => (float)($order['paymentAmount'] ?? 0),
+            'delivery_ttn'  => self::deliveryTtn($order),
             'items'         => $items,
         ];
+    }
+
+    /**
+     * Номер ТТН Нової пошти, якою замовлення їхало до клієнта.
+     * Потрібен для трекінгу й виявлення «Легкого повернення».
+     *
+     * @param array<string,mixed> $order
+     */
+    private static function deliveryTtn(array $order): string
+    {
+        $rows = $order['ord_delivery_data'] ?? [];
+        if (!is_array($rows)) {
+            return '';
+        }
+        foreach ($rows as $d) {
+            if (is_array($d) && ($d['provider'] ?? '') === 'novaposhta') {
+                $ttn = trim((string)($d['trackingNumber'] ?? ''));
+                if ($ttn !== '') {
+                    return $ttn;
+                }
+            }
+        }
+        return '';
     }
 
     /**

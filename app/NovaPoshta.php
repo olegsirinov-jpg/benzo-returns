@@ -516,9 +516,37 @@ class NovaPoshta
             $out[$num] = [
                 'code'   => (int)($row['StatusCode'] ?? 0),
                 'status' => (string)($row['Status'] ?? ''),
+                // легке повернення (клієнт оформив сам у застосунку НП)
+                'light_possible' => !empty($row['PossibilityLightReturn']),
+                'light_ttn'      => (string)($row['LightReturnNumber'] ?? ''),
+                'light_reason'   => (string)($row['UndeliveryReasonsSubtypeDescription'] ?? ''),
             ];
         }
         return $out;
+    }
+
+    /**
+     * Інфо про легке повернення по оригінальній ТТН замовлення.
+     *
+     * @return array{possible:bool,ttn:string,reason:string,found:bool}
+     */
+    public static function lightReturnInfo(string $originalTtn): array
+    {
+        $originalTtn = trim($originalTtn);
+        if ($originalTtn === '') {
+            return ['possible' => false, 'ttn' => '', 'reason' => '', 'found' => false];
+        }
+        $res = self::track([['ttn' => $originalTtn, 'phone' => Config::str('np_recip_phone')]]);
+        $row = $res[$originalTtn] ?? null;
+        if ($row === null) {
+            return ['possible' => false, 'ttn' => '', 'reason' => '', 'found' => false];
+        }
+        return [
+            'possible' => (bool)$row['light_possible'],
+            'ttn'      => (string)$row['light_ttn'],
+            'reason'   => (string)$row['light_reason'],
+            'found'    => true,
+        ];
     }
 
     /**

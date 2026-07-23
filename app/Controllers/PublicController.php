@@ -316,6 +316,7 @@ class PublicController
                 'refund_comment' => $refund['comment'] ?: null,
                 'shipping_payer' => Dict::defaultShippingPayer($reason),
                 'total_amount'   => $this->itemsTotal($items),
+                'np_original_ttn'=> $sdOrder !== null ? ($sdOrder['delivery_ttn'] ?? null) : null,
                 'source'         => 'web',
                 'ip'             => substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45),
                 'public_token'   => bin2hex(random_bytes(16)),
@@ -584,6 +585,12 @@ class PublicController
             return;
         }
 
+        // Не даємо перезаписати накладну магазину або вже виявлене «Легке повернення»
+        if (!empty($rma['np_doc_ref']) || (string)($rma['ttn_source'] ?? '') === 'light_return') {
+            Session::flash('error', 'Для цієї заявки номер відправлення вже визначено — вводити його не потрібно.');
+            Response::redirect('/returns/status');
+        }
+
         $ttn = Validate::ttn((string)($_POST['ttn'] ?? ''));
         if ($ttn === null) {
             Session::flash('error', 'Вкажіть коректний номер ТТН.');
@@ -598,6 +605,7 @@ class PublicController
         Db::update('rma', [
             'return_ttn' => $ttn,
             'carrier'    => $carrier,
+            'ttn_source' => 'manual',
             'shipped_at' => date('Y-m-d'),
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = ?', [$rmaId]);

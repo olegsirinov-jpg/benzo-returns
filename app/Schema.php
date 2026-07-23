@@ -12,7 +12,7 @@ namespace App;
  */
 class Schema
 {
-    const TARGET_VERSION = 4;
+    const TARGET_VERSION = 5;
 
     public static function ensure(): void
     {
@@ -34,6 +34,9 @@ class Schema
         }
         if ($current < 4) {
             self::migrateV4();
+        }
+        if ($current < 5) {
+            self::migrateV5();
         }
 
         Db::run(
@@ -98,6 +101,24 @@ class Schema
         }
         if (!self::columnExists($db, 'rma', 'np_tracked_at')) {
             Db::run('ALTER TABLE `rma` ADD COLUMN `np_tracked_at` DATETIME NULL AFTER `np_track_status`');
+        }
+    }
+
+    /**
+     * v5: легке повернення Нової пошти + джерело ТТН.
+     */
+    private static function migrateV5(): void
+    {
+        $db = Env::str('DB_NAME');
+        $add = [
+            'np_original_ttn'     => "VARCHAR(40) NULL AFTER `np_tracked_at`",
+            'ttn_source'          => "VARCHAR(20) NULL AFTER `return_ttn`",
+            'light_return_reason' => "VARCHAR(160) NULL AFTER `np_original_ttn`",
+        ];
+        foreach ($add as $col => $def) {
+            if (!self::columnExists($db, 'rma', $col)) {
+                Db::run('ALTER TABLE `rma` ADD COLUMN `' . $col . '` ' . $def);
+            }
         }
     }
 

@@ -144,6 +144,15 @@ a { color: var(--brand); }
 }
 .subblock__title { font-weight: 650; margin-bottom: 14px; font-size: 14px; }
 
+/* ---- Варіант вибору (способи відправлення) ---- */
+.option {
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px 16px; margin: 12px 0; background: #fbfcfd;
+}
+.option__title { font-weight: 650; margin-bottom: 8px; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.option ol { margin: 8px 0 0; padding-left: 20px; }
+.option ol li { margin-bottom: 5px; }
+
 /* ---- Розгортна підказка (нативний <details>, без JS) ---- */
 .help { border: 1px solid var(--line); border-radius: 8px; background: #fff; margin-bottom: 16px; }
 .help summary {

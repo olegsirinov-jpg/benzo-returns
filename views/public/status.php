@@ -31,11 +31,34 @@ $comments = $comments ?? [];
 <?php else: ?>
 
     <?php
-    $status   = (string)$rma['status'];
-    $approved = in_array($status, ['approved', 'waiting_customer_shipment'], true);
-    $canTtn   = $approved || $status === 'in_transit';
-    // накладну вже оформив магазин — клієнту не треба нічого створювати
-    $hasNpTtn = !empty($rma['return_ttn']) && ($rma['carrier'] ?? '') === 'novaposhta';
+    $status = (string)$rma['status'];
+    $action = (string)$rma['desired_action'];
+
+    // Погоджено, клієнт має відправити товар
+    $approved  = in_array($status, ['approved', 'waiting_customer_shipment'], true);
+    $inTransit = $status === 'in_transit';
+
+    // Звідки взялася ТТН повернення
+    $returnTtn = trim((string)($rma['return_ttn'] ?? ''));
+    $ttnSource = (string)($rma['ttn_source'] ?? '');
+    $hasTtn    = $returnTtn !== '';
+    $isOurNp   = $hasTtn && ($ttnSource === 'our_np' || !empty($rma['np_doc_ref']));
+    $isLight   = $hasTtn && $ttnSource === 'light_return';
+    $isManual  = $hasTtn && !$isOurNp && !$isLight;
+
+    // Замовлення доставлялося Новою поштою — Легке повернення відстежиться автоматично
+    $hasOriginalTtn = !empty($rma['np_original_ttn']);
+
+    // Клієнт ще має відправити (погоджено й ТТН немає)
+    $needsShipping = $approved && !$hasTtn;
+
+    // Позначка джерела ТТН для картки
+    $ttnSourceLabel = '';
+    if ($isOurNp)      { $ttnSourceLabel = 'накладна магазину'; }
+    elseif ($isLight)  { $ttnSourceLabel = 'Легке повернення НП'; }
+    elseif ($isManual) { $ttnSourceLabel = 'вказано вами'; }
+
+    $payerLabel = App\Dict::shippingPayers()[(string)$rma['shipping_payer']] ?? 'За домовленістю';
     ?>
 
     <h1>Заявка <span class="mono"><?= e($rma['rma_number']) ?></span></h1>
@@ -55,10 +78,10 @@ $comments = $comments ?? [];
                 <?php endif; ?>
             </td></tr>
             <tr><td>Причина</td><td><?= e(App\Dict::reason((string)$rma['reason_code'])) ?></td></tr>
-            <tr><td>Бажана дія</td><td><?= e(App\Dict::action((string)$rma['desired_action'])) ?></td></tr>
+            <tr><td>Бажана дія</td><td><?= e(App\Dict::action($action)) ?></td></tr>
             <tr><td>Дата створення</td><td><?= dt((string)$rma['created_at'], 'd.m.Y') ?></td></tr>
-            <?php if ($rma['return_ttn']): ?>
-                <tr><td>ТТН повернення</td><td class="mono"><?= e($rma['return_ttn']) ?></td></tr>
+            <?php if ($hasTtn): ?>
+                <tr><td>ТТН повернення</td><td class="mono"><?= e($returnTtn) ?><?php if ($ttnSourceLabel !== ''): ?> <span class="muted small">(<?= e($ttnSourceLabel) ?>)</span><?php endif; ?></td></tr>
             <?php endif; ?>
             <?php if ($rma['client_message']): ?>
                 <tr><td>Коментар менеджера</td><td><?= nl2br(e($rma['client_message'])) ?></td></tr>
@@ -75,7 +98,7 @@ $comments = $comments ?? [];
 
     <?php
     // Реквізити потрібні, якщо обрано повернення коштів, а їх ще немає
-    $needRefundDetails = (string)$rma['desired_action'] === 'refund'
+    $needRefundDetails = $action === 'refund'
         && empty($rma['refund_iban'])
         && !in_array($status, ['refunded', 'closed', 'cancelled', 'rejected'], true);
     ?>
@@ -126,25 +149,80 @@ $comments = $comments ?? [];
         </div>
     <?php endif; ?>
 
-    <?php if ($approved): ?>
-        <div class="card">
-            <h2 class="mt0">Ваше повернення погоджено — інструкція для відправки</h2>
+    <?php // ── ВІДПРАВЛЕННЯ ТОВАРУ ─────────────────────────────────── ?>
 
-            <?php if ($hasNpTtn): ?>
+    <?php if ($isLight): ?>
+        <?php // Клієнт оформив «Легке повернення» — ми його виявили ?>
+        <div class="card">
+            <div class="alert alert--success" style="margin-top:0">
+                Ми бачимо, що ви оформили <strong>«Легке повернення»</strong> Нової пошти. Дякуємо!
+            </div>
+            <table class="kv" style="margin-bottom:0">
+                <tr><td>Номер накладної (ТТН)</td><td class="mono"><strong><?= e($returnTtn) ?></strong></td></tr>
+                <tr><td>Спосіб</td><td>«Легке повернення» Нової пошти</td></tr>
+            </table>
+            <p class="small muted mb0" style="margin-top:12px">
+                Окрема оплата й додаткова накладна не потрібні. Щойно посилка прибуде до нас,
+                ми повідомимо вас і продовжимо обробку заявки.
+            </p>
+        </div>
+
+    <?php elseif ($isManual && ($approved || $inTransit)): ?>
+        <?php // Клієнт відправив сам і вказав ТТН ?>
+        <div class="card">
+            <div class="alert alert--info" style="margin-top:0">
+                Ви вказали номер відправлення — ми очікуємо вашу посилку.
+            </div>
+            <table class="kv" style="margin-bottom:12px">
+                <tr><td>Номер відправлення (ТТН)</td><td class="mono"><strong><?= e($returnTtn) ?></strong></td></tr>
+                <tr><td>Перевізник</td><td><?= e(App\Dict::carriers()[(string)$rma['carrier']] ?? (string)$rma['carrier']) ?></td></tr>
+            </table>
+            <details class="help">
+                <summary>Помилились у номері?</summary>
+                <div class="help__body">
+                    <form method="post" action="<?= e(url('/returns/ttn')) ?>">
+                        <?= App\Csrf::field() ?>
+                        <div class="grid2">
+                            <div class="field">
+                                <label class="label" for="ttn">ТТН</label>
+                                <input class="input mono" type="text" id="ttn" name="ttn" value="<?= e($returnTtn) ?>">
+                            </div>
+                            <div class="field">
+                                <label class="label" for="carrier">Перевізник</label>
+                                <select class="select" id="carrier" name="carrier">
+                                    <?php foreach (App\Dict::carriers() as $code => $label): ?>
+                                        <option value="<?= e($code) ?>" <?= (string)$rma['carrier'] === $code ? 'selected' : '' ?>><?= e($label) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn--ghost" type="submit">Оновити ТТН</button>
+                    </form>
+                </div>
+            </details>
+        </div>
+
+    <?php elseif ($approved): ?>
+        <?php // Погоджено. Або магазин оформив накладну (isOurNp), або клієнт ще має відправити ?>
+        <div class="card">
+            <h2 class="mt0">Ваше повернення погоджено — як відправити товар</h2>
+
+            <?php if ($isOurNp): ?>
                 <div class="alert alert--success" style="margin-top:0">
                     Ми вже оформили накладну Нової пошти — вам <strong>не потрібно</strong> нічого створювати чи вводити.
-                    Просто здайте товар на відділенні.
+                    Просто здайте товар на будь-якому відділенні.
                 </div>
                 <table class="kv" style="margin-bottom:16px">
-                    <tr><td>Номер накладної (ТТН)</td><td class="mono"><strong><?= e($rma['return_ttn']) ?></strong></td></tr>
+                    <tr><td>Номер накладної (ТТН)</td><td class="mono"><strong><?= e($returnTtn) ?></strong></td></tr>
                     <tr><td>Перевізник</td><td>Нова пошта</td></tr>
                 </table>
             <?php endif; ?>
 
+            <h3 class="mt0">Як правильно спакувати</h3>
             <ol>
                 <li>
                     <strong>Покладіть товар в оригінальну упаковку.</strong>
-                    Не клейте скотч, наклейки Нової пошти або інші етикетки
+                    Не клейте скотч, наклейки Нової пошти чи інші етикетки
                     <strong>безпосередньо на фабричну упаковку</strong> товару.
                 </li>
                 <li>
@@ -160,24 +238,74 @@ $comments = $comments ?? [];
                     Сфотографуйте товар, комплектацію і пакування — це захистить вас у разі
                     пошкодження під час доставки.
                 </li>
-                <?php if ($hasNpTtn): ?>
-                    <li>
-                        <strong>Прийдіть на будь-яке відділення Нової пошти</strong> і назвіть номер накладної
-                        <strong class="mono"><?= e($rma['return_ttn']) ?></strong> — оператор прийме та відправить посилку.
-                    </li>
-                <?php else: ?>
-                    <li>Відправте посилку на відділення, яке вказав менеджер.</li>
-                    <li>Внесіть номер ТТН у формі нижче — щоб ми очікували вашу посилку.</li>
-                <?php endif; ?>
             </ol>
 
-            <div class="notice">
+            <?php if ($isOurNp): ?>
+                <div class="notice">
+                    Прийдіть на будь-яке відділення Нової пошти й назвіть номер накладної
+                    <strong class="mono"><?= e($returnTtn) ?></strong> — оператор прийме та відправить посилку.
+                </div>
+            <?php else: ?>
+                <h3>Оберіть зручний спосіб відправлення</h3>
+
+                <div class="option">
+                    <div class="option__title">1. «Легке повернення» Нової пошти <span class="badge badge--green">безкоштовно</span></div>
+                    <p class="mb0">
+                        Найпростіший спосіб, якщо замовлення привезла Нова пошта. Окрема накладна й оплата
+                        не потрібні — доставку повернення оплачує Нова пошта (до 30&nbsp;кг, протягом 14 днів).
+                    </p>
+                    <ol>
+                        <li>Відкрийте застосунок <strong>Nova Post</strong> (або зверніться на відділення).</li>
+                        <li>Знайдіть посилку з вашим замовленням у розділі «Мої відправлення».</li>
+                        <li>Натисніть <strong>«Оформити повернення»</strong> і оберіть відділення для здачі.</li>
+                        <li>Здайте спаковану посилку на це відділення.</li>
+                    </ol>
+                    <p class="small muted mb0">
+                        <?php if ($hasOriginalTtn): ?>
+                            Щойно ви оформите «Легке повернення», ми <strong>автоматично</strong> побачимо його —
+                            вводити ТТН вручну не потрібно.
+                        <?php else: ?>
+                            Після оформлення вкажіть, будь ласка, отриманий номер ТТН у формі нижче.
+                        <?php endif; ?>
+                    </p>
+                </div>
+
+                <div class="option">
+                    <div class="option__title">2. Відправити самостійно</div>
+                    <p class="mb0">
+                        Оформіть звичайну накладну (Нова пошта чи інший перевізник) на відділення, яке вказав
+                        менеджер, і внесіть номер ТТН у формі нижче — щоб ми очікували вашу посилку.
+                    </p>
+                </div>
+
+                <form method="post" action="<?= e(url('/returns/ttn')) ?>" style="margin-top:16px">
+                    <?= App\Csrf::field() ?>
+                    <div class="grid2">
+                        <div class="field">
+                            <label class="label" for="ttn">Номер ТТН відправлення</label>
+                            <input class="input mono" type="text" id="ttn" name="ttn"
+                                   value="<?= e($returnTtn) ?>" placeholder="20450000000000">
+                        </div>
+                        <div class="field">
+                            <label class="label" for="carrier">Перевізник</label>
+                            <select class="select" id="carrier" name="carrier">
+                                <?php foreach (App\Dict::carriers() as $code => $label): ?>
+                                    <option value="<?= e($code) ?>" <?= (string)$rma['carrier'] === $code ? 'selected' : '' ?>><?= e($label) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn" type="submit">Зберегти ТТН</button>
+                </form>
+            <?php endif; ?>
+
+            <div class="notice" style="margin-top:16px">
                 Якщо товар або упаковка будуть пошкоджені під час зворотної доставки через неналежне
                 пакування, магазин має право відмовити у прийнятті повернення.
             </div>
             <p class="small muted mb0">
-                Доставку оплачує: <strong><?= e(App\Dict::shippingPayers()[(string)$rma['shipping_payer']] ?? 'За домовленістю') ?></strong>.
-                <?php if ($hasNpTtn && (string)$rma['shipping_payer'] === 'customer'): ?>
+                Доставку оплачує: <strong><?= e($payerLabel) ?></strong>.
+                <?php if ($isOurNp && (string)$rma['shipping_payer'] === 'customer'): ?>
                     Оплата — при здачі посилки на відділенні.
                 <?php endif; ?>
                 Якщо у вас є питання щодо відправки — зв’яжіться з менеджером.
@@ -185,32 +313,7 @@ $comments = $comments ?? [];
         </div>
     <?php endif; ?>
 
-    <?php if ($canTtn && !$hasNpTtn): ?>
-        <div class="card">
-            <h2 class="mt0">Номер ТТН відправлення</h2>
-            <p class="small muted">Якщо ви вже відправили товар — вкажіть номер ТТН, щоб ми очікували посилку.</p>
-            <form method="post" action="<?= e(url('/returns/ttn')) ?>">
-                <?= App\Csrf::field() ?>
-                <div class="grid2">
-                    <div class="field">
-                        <label class="label" for="ttn">ТТН</label>
-                        <input class="input mono" type="text" id="ttn" name="ttn"
-                               value="<?= e((string)$rma['return_ttn']) ?>" placeholder="20450000000000">
-                    </div>
-                    <div class="field">
-                        <label class="label" for="carrier">Перевізник</label>
-                        <select class="select" id="carrier" name="carrier">
-                            <?php foreach (App\Dict::carriers() as $code => $label): ?>
-                                <option value="<?= e($code) ?>" <?= (string)$rma['carrier'] === $code ? 'selected' : '' ?>><?= e($label) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <button class="btn" type="submit"><?= $rma['return_ttn'] ? 'Оновити ТТН' : 'Зберегти ТТН' ?></button>
-            </form>
-        </div>
-    <?php endif; ?>
-
+    <?php // ── СТАТУСНІ ПОВІДОМЛЕННЯ ───────────────────────────────── ?>
     <?php if ($status === 'refunded'): ?>
         <div class="alert alert--success">
             Кошти за заявкою <?= e($rma['rma_number']) ?> повернено. Термін зарахування залежить від банку.
@@ -218,6 +321,10 @@ $comments = $comments ?? [];
     <?php elseif ($status === 'received' || $status === 'inspection'): ?>
         <div class="alert alert--info">
             Ми отримали товар за заявкою <?= e($rma['rma_number']) ?>. Зараз він проходить перевірку.
+        </div>
+    <?php elseif ($inTransit && !$isLight && !$isManual): ?>
+        <div class="alert alert--info">
+            Ваша посилка в дорозі. Щойно вона прибуде до нас, ми повідомимо вас.
         </div>
     <?php elseif ($status === 'rejected'): ?>
         <div class="alert alert--error">

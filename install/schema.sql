@@ -56,9 +56,12 @@ CREATE TABLE IF NOT EXISTS `rma` (
 
   -- доставка
   `return_ttn` VARCHAR(40) NULL,
+  `ttn_source` VARCHAR(20) NULL,
   `np_doc_ref` VARCHAR(64) NULL,
   `np_track_status` VARCHAR(160) NULL,
   `np_tracked_at` DATETIME NULL,
+  `np_original_ttn` VARCHAR(40) NULL,
+  `light_return_reason` VARCHAR(160) NULL,
   `carrier` VARCHAR(40) NULL,
   `shipped_at` DATE NULL,
   `received_at` DATE NULL,

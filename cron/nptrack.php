@@ -56,10 +56,32 @@ foreach ($rows as $row) {
             $moved++;
         }
     }
-    // легка пауза, щоб не бити по ліміту НП
     usleep(200000);
 }
 
-$msg = sprintf('[%s] Трекінг НП: перевірено %d, оновлено статусів %d.', date('Y-m-d H:i:s'), $checked, $moved);
+// --- Легке повернення: клієнт міг оформити його сам у застосунку НП ---
+// Перевіряємо заявки, де ще немає ТТН повернення, але є оригінальна ТТН
+// замовлення, і які ще на етапі очікування відправки.
+$lightRows = Db::all(
+    "SELECT id FROM rma
+     WHERE np_original_ttn IS NOT NULL AND np_original_ttn <> ''
+       AND (return_ttn IS NULL OR return_ttn = '')
+       AND status IN ('new','manager_review','approved','waiting_customer_shipment','need_more_info')
+     ORDER BY id
+     LIMIT 100"
+);
+$lightDetected = 0;
+foreach ($lightRows as $row) {
+    $res = Rma::checkLightReturn((int)$row['id']);
+    if (!empty($res['detected'])) {
+        $lightDetected++;
+    }
+    usleep(200000);
+}
+
+$msg = sprintf(
+    '[%s] Трекінг НП: перевірено %d, оновлено статусів %d. Легке повернення: перевірено %d, виявлено %d.',
+    date('Y-m-d H:i:s'), $checked, $moved, count($lightRows), $lightDetected
+);
 @file_put_contents(BASE_PATH . '/storage/logs/cron.log', $msg . PHP_EOL, FILE_APPEND);
 echo $msg . PHP_EOL;
