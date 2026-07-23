@@ -269,11 +269,19 @@ $comments = $comments ?? [];
                         Оформіть звичайну накладну <strong>Нової пошти</strong> на відділення нижче та внесіть
                         номер ТТН у формі — щоб ми очікували вашу посилку. Відправлення приймається лише Новою поштою.
                     </p>
-                    <table class="kv" style="margin-bottom:0">
+                    <table class="kv" style="margin-bottom:12px">
                         <tr><td>Отримувач</td><td><strong>ФОП Шірінов Олег Ігорович</strong></td></tr>
                         <tr><td>Телефон</td><td class="mono">067 817 70 37</td></tr>
                         <tr><td>Адреса</td><td>Київська обл., Софіївська Борщагівка, відділення №3</td></tr>
                     </table>
+                    <div class="notice" style="margin:0">
+                        <strong>Доставку оплачує: <?= e($payerLabel) ?>.</strong>
+                        <?php if ((string)$rma['shipping_payer'] === 'customer'): ?>
+                            Оберіть відповідну опцію оплати при оформленні накладної.
+                        <?php elseif ((string)$rma['shipping_payer'] === 'store'): ?>
+                            Оформлюйте накладну з оплатою отримувачем — доставку сплатимо ми при отриманні.
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <form method="post" action="<?= e(url('/returns/ttn')) ?>" style="margin-top:16px">
@@ -293,9 +301,11 @@ $comments = $comments ?? [];
                 пакування, магазин має право відмовити у прийнятті повернення.
             </div>
             <p class="small muted mb0">
-                Доставку оплачує: <strong><?= e($payerLabel) ?></strong>.
-                <?php if ($isOurNp && (string)$rma['shipping_payer'] === 'customer'): ?>
-                    Оплата — при здачі посилки на відділенні.
+                <?php if ($isOurNp): ?>
+                    Доставку оплачує: <strong><?= e($payerLabel) ?></strong>.
+                    <?php if ((string)$rma['shipping_payer'] === 'customer'): ?>
+                        Оплата — при здачі посилки на відділенні.
+                    <?php endif; ?>
                 <?php endif; ?>
                 Якщо у вас є питання щодо відправки — зв’яжіться з менеджером.
             </p>
