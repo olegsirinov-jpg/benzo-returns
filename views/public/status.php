@@ -175,26 +175,17 @@ $comments = $comments ?? [];
             </div>
             <table class="kv" style="margin-bottom:12px">
                 <tr><td>Номер відправлення (ТТН)</td><td class="mono"><strong><?= e($returnTtn) ?></strong></td></tr>
-                <tr><td>Перевізник</td><td><?= e(App\Dict::carriers()[(string)$rma['carrier']] ?? (string)$rma['carrier']) ?></td></tr>
+                <tr><td>Перевізник</td><td>Нова пошта</td></tr>
             </table>
             <details class="help">
                 <summary>Помилились у номері?</summary>
                 <div class="help__body">
                     <form method="post" action="<?= e(url('/returns/ttn')) ?>">
                         <?= App\Csrf::field() ?>
-                        <div class="grid2">
-                            <div class="field">
-                                <label class="label" for="ttn">ТТН</label>
-                                <input class="input mono" type="text" id="ttn" name="ttn" value="<?= e($returnTtn) ?>">
-                            </div>
-                            <div class="field">
-                                <label class="label" for="carrier">Перевізник</label>
-                                <select class="select" id="carrier" name="carrier">
-                                    <?php foreach (App\Dict::carriers() as $code => $label): ?>
-                                        <option value="<?= e($code) ?>" <?= (string)$rma['carrier'] === $code ? 'selected' : '' ?>><?= e($label) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                        <input type="hidden" name="carrier" value="novaposhta">
+                        <div class="field">
+                            <label class="label" for="ttn">ТТН Нової пошти</label>
+                            <input class="input mono" type="text" id="ttn" name="ttn" value="<?= e($returnTtn) ?>">
                         </div>
                         <button class="btn btn--ghost" type="submit">Оновити ТТН</button>
                     </form>
@@ -253,12 +244,14 @@ $comments = $comments ?? [];
                     <p class="mb0">
                         Найпростіший спосіб, якщо замовлення привезла Нова пошта. Окрема накладна й оплата
                         не потрібні — доставку повернення оплачує Нова пошта (до 30&nbsp;кг, протягом 14 днів).
+                        Оформити послугу можна в мобільному застосунку <strong>Nova Post</strong> або в
+                        бізнес-кабінеті на сайті Нової пошти:
                     </p>
                     <ol>
-                        <li>Відкрийте застосунок <strong>Nova Post</strong> (або зверніться на відділення).</li>
-                        <li>Знайдіть посилку з вашим замовленням у розділі «Мої відправлення».</li>
-                        <li>Натисніть <strong>«Оформити повернення»</strong> і оберіть відділення для здачі.</li>
-                        <li>Здайте спаковану посилку на це відділення.</li>
+                        <li>Увійдіть у розділ <strong>«Мої відправлення»</strong> та оберіть посилку, яку потрібно повернути.</li>
+                        <li>У рядку <strong>«Керувати посилкою»</strong> оберіть послугу <strong>«Легке повернення»</strong>.</li>
+                        <li>Із переліку оберіть причину повернення товару.</li>
+                        <li>Відправте посилку за створеною накладною.</li>
                     </ol>
                     <p class="small muted mb0">
                         <?php if ($hasOriginalTtn): ?>
@@ -271,29 +264,25 @@ $comments = $comments ?? [];
                 </div>
 
                 <div class="option">
-                    <div class="option__title">2. Відправити самостійно</div>
-                    <p class="mb0">
-                        Оформіть звичайну накладну (Нова пошта чи інший перевізник) на відділення, яке вказав
-                        менеджер, і внесіть номер ТТН у формі нижче — щоб ми очікували вашу посилку.
+                    <div class="option__title">2. Відправити самостійно Новою поштою</div>
+                    <p>
+                        Оформіть звичайну накладну <strong>Нової пошти</strong> на відділення нижче та внесіть
+                        номер ТТН у формі — щоб ми очікували вашу посилку. Відправлення приймається лише Новою поштою.
                     </p>
+                    <table class="kv" style="margin-bottom:0">
+                        <tr><td>Отримувач</td><td><strong>ФОП Шірінов Олег Ігорович</strong></td></tr>
+                        <tr><td>Телефон</td><td class="mono">067 817 70 37</td></tr>
+                        <tr><td>Адреса</td><td>Київська обл., Софіївська Борщагівка, відділення №3</td></tr>
+                    </table>
                 </div>
 
                 <form method="post" action="<?= e(url('/returns/ttn')) ?>" style="margin-top:16px">
                     <?= App\Csrf::field() ?>
-                    <div class="grid2">
-                        <div class="field">
-                            <label class="label" for="ttn">Номер ТТН відправлення</label>
-                            <input class="input mono" type="text" id="ttn" name="ttn"
-                                   value="<?= e($returnTtn) ?>" placeholder="20450000000000">
-                        </div>
-                        <div class="field">
-                            <label class="label" for="carrier">Перевізник</label>
-                            <select class="select" id="carrier" name="carrier">
-                                <?php foreach (App\Dict::carriers() as $code => $label): ?>
-                                    <option value="<?= e($code) ?>" <?= (string)$rma['carrier'] === $code ? 'selected' : '' ?>><?= e($label) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+                    <input type="hidden" name="carrier" value="novaposhta">
+                    <div class="field">
+                        <label class="label" for="ttn">Номер ТТН Нової пошти</label>
+                        <input class="input mono" type="text" id="ttn" name="ttn"
+                               value="<?= e($returnTtn) ?>" placeholder="20450000000000">
                     </div>
                     <button class="btn" type="submit">Зберегти ТТН</button>
                 </form>
