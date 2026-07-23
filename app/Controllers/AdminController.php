@@ -256,6 +256,25 @@ class AdminController
             'manager_id'     => 'Відповідальний менеджер',
             'desired_action' => 'Бажана дія',
         ];
+        // перекладаємо коди у людські назви для журналу
+        $fmt = function (string $field, string $val): string {
+            if ($val === '') {
+                return '—';
+            }
+            switch ($field) {
+                case 'desired_action':
+                    return Dict::action($val);
+                case 'shipping_payer':
+                    return Dict::shippingPayers()[$val] ?? $val;
+                case 'carrier':
+                    return Dict::carriers()[$val] ?? $val;
+                case 'manager_id':
+                    $name = Db::value('SELECT name FROM users WHERE id = ?', [(int)$val]);
+                    return $name !== null ? (string)$name : $val;
+                default:
+                    return $val;
+            }
+        };
         foreach ($labels as $field => $label) {
             if (!array_key_exists($field, $data)) {
                 continue;
@@ -263,7 +282,7 @@ class AdminController
             $old = (string)($rma[$field] ?? '');
             $new = (string)($data[$field] ?? '');
             if ($old !== $new) {
-                Rma::log($rmaId, $label, $old !== '' ? $old : '—', $new !== '' ? $new : '—');
+                Rma::log($rmaId, $label, $fmt($field, $old), $fmt($field, $new));
             }
         }
 
