@@ -475,6 +475,12 @@ $canReject = App\Workflow::canReject($status);
                         </td></tr>
                     <?php endif; ?>
                 </table>
+                <div class="btn-row" style="margin-bottom:10px">
+                    <form method="post" action="<?= e(url('/admin/rma/' . $id . '/np-track')) ?>" style="display:inline">
+                        <?= $token ?>
+                        <button class="btn btn--sm btn--ghost" type="submit">Оновити трекінг</button>
+                    </form>
+                </div>
                 <p class="small muted mb0">
                     Якщо потрібно все одно оформити накладну магазину — спершу приберіть ТТН у блоці «Доставка».
                 </p>
