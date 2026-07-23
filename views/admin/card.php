@@ -258,14 +258,49 @@ $canReject = App\Workflow::canReject($status);
             <?= $token ?>
 
             <div class="card">
-                <div class="card__title">Відповідальний менеджер</div>
-                <select class="select" name="manager_id">
-                    <option value="">— Не призначено —</option>
-                    <?php foreach ($managers as $m): ?>
-                        <option value="<?= (int)$m['id'] ?>" <?= (int)$rma['manager_id'] === (int)$m['id'] ? 'selected' : '' ?>><?= e($m['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="grid2">
+                    <div class="field mb0">
+                        <label class="label">Відповідальний менеджер</label>
+                        <select class="select" name="manager_id">
+                            <option value="">— Не призначено —</option>
+                            <?php foreach ($managers as $m): ?>
+                                <option value="<?= (int)$m['id'] ?>" <?= (int)$rma['manager_id'] === (int)$m['id'] ? 'selected' : '' ?>><?= e($m['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="field mb0">
+                        <label class="label">Бажана дія</label>
+                        <select class="select" name="desired_action" id="card-action">
+                            <?php foreach (App\Dict::actions() as $code => $label): ?>
+                                <option value="<?= e($code) ?>" <?= (string)$rma['desired_action'] === $code ? 'selected' : '' ?>><?= e($label) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="hint">Уточніть після розмови з клієнтом (напр. «ще не знаю» → «повернути кошти»).</div>
+                    </div>
+                </div>
+
+                <div class="field mb0 mt16 <?= (string)$rma['desired_action'] === 'exchange' ? '' : 'hidden' ?>" id="card-exchange">
+                    <label class="label">На який товар обміняти</label>
+                    <textarea class="textarea" name="exchange_wish" rows="2"><?= e((string)$rma['exchange_wish']) ?></textarea>
+                </div>
+                <div class="hint mt16 hidden" id="card-refund-hint">
+                    Обрано «Повернути кошти» — збережіть зміни, і зʼявиться блок реквізитів нижче.
+                </div>
             </div>
+            <script>
+            (function () {
+                var sel = document.getElementById('card-action');
+                var ex  = document.getElementById('card-exchange');
+                var rf  = document.getElementById('card-refund-hint');
+                if (!sel) { return; }
+                var initial = sel.value;
+                sel.addEventListener('change', function () {
+                    ex.classList.toggle('hidden', sel.value !== 'exchange');
+                    // підказка про реквізити лише якщо refund щойно обрали, а блоку ще нема
+                    rf.classList.toggle('hidden', !(sel.value === 'refund' && sel.value !== initial && !document.querySelector('input[name="refund_iban"]')));
+                });
+            })();
+            </script>
 
             <?php if ((string)$rma['desired_action'] === 'refund' || $rma['refund_iban']): ?>
             <div class="card">

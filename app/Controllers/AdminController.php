@@ -230,6 +230,13 @@ class AdminController
         $manager = (string)($_POST['manager_id'] ?? '');
         $data['manager_id'] = ctype_digit($manager) && (int)$manager > 0 ? (int)$manager : null;
 
+        // бажана дія — менеджер може уточнити (напр. «ще не знаю» -> «повернути кошти»)
+        $action = (string)($_POST['desired_action'] ?? '');
+        if (isset(Dict::actions()[$action])) {
+            $data['desired_action'] = $action;
+        }
+        $data['exchange_wish'] = Validate::text((string)($_POST['exchange_wish'] ?? ''), 2000) ?: null;
+
         if ($iban !== '' && $data['refund_iban'] === null) {
             Session::flash('error', 'IBAN некоректний — поле не збережено. Перевірте формат UA…');
             unset($data['refund_iban']);
@@ -247,6 +254,7 @@ class AdminController
             'refund_amount'  => 'Сума до повернення',
             'refund_iban'    => 'IBAN',
             'manager_id'     => 'Відповідальний менеджер',
+            'desired_action' => 'Бажана дія',
         ];
         foreach ($labels as $field => $label) {
             if (!array_key_exists($field, $data)) {
