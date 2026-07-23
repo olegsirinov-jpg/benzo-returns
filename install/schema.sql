@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS `rma` (
   `np_doc_ref` VARCHAR(64) NULL,
   `np_track_status` VARCHAR(160) NULL,
   `np_tracked_at` DATETIME NULL,
+  `np_cost_alert` TINYINT(1) NOT NULL DEFAULT 0,
+  `np_cost_note` VARCHAR(200) NULL,
   `np_original_ttn` VARCHAR(40) NULL,
   `light_return_reason` VARCHAR(160) NULL,
   `carrier` VARCHAR(40) NULL,

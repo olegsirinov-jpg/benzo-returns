@@ -70,6 +70,26 @@ class Telegram
     }
 
     /**
+     * Маячок: на зворотній ТТН є оплата, хоча платити мав клієнт.
+     * @param array<string,mixed> $rma
+     */
+    public static function costAlert(array $rma, string $note): bool
+    {
+        $lines = [
+            '⚠️ <b>Оплата на зворотній ТТН — платити мав клієнт</b>',
+            '',
+            'Заявка: <b>' . e($rma['rma_number']) . '</b>',
+            'ТТН: <code>' . e((string)$rma['return_ttn']) . '</code>',
+            e($note),
+            '',
+            'Перевірте перед отриманням посилки:',
+            Rma::adminUrl((int)$rma['id']),
+        ];
+
+        return self::send(implode("\n", $lines));
+    }
+
+    /**
      * Нагадування про завислу заявку (п.13.3 ТЗ).
      * @param array<string,mixed> $rma
      */

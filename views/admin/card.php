@@ -45,6 +45,15 @@ $btn = function (string $status, string $label, string $class = 'btn--ghost') us
     </div>
 <?php endif; ?>
 
+<?php if (!empty($rma['np_cost_alert'])): ?>
+    <div class="alert alert--error" style="margin-top:16px">
+        💸 <strong>Оплата на зворотній ТТН, хоча доставку мав оплатити клієнт.</strong>
+        <?= e((string)$rma['np_cost_note']) ?>
+        Перевірте перед отриманням посилки — можливо, доведеться відмовитись від отримання
+        або узгодити оплату з клієнтом.
+    </div>
+<?php endif; ?>
+
 <!-- ==================== Дії ==================== -->
 <?php
 $steps  = App\Workflow::nextSteps($rma);

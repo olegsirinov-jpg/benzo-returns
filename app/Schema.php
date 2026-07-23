@@ -12,7 +12,7 @@ namespace App;
  */
 class Schema
 {
-    const TARGET_VERSION = 5;
+    const TARGET_VERSION = 6;
 
     public static function ensure(): void
     {
@@ -37,6 +37,9 @@ class Schema
         }
         if ($current < 5) {
             self::migrateV5();
+        }
+        if ($current < 6) {
+            self::migrateV6();
         }
 
         Db::run(
@@ -114,6 +117,23 @@ class Schema
             'np_original_ttn'     => "VARCHAR(40) NULL AFTER `np_tracked_at`",
             'ttn_source'          => "VARCHAR(20) NULL AFTER `return_ttn`",
             'light_return_reason' => "VARCHAR(160) NULL AFTER `np_original_ttn`",
+        ];
+        foreach ($add as $col => $def) {
+            if (!self::columnExists($db, 'rma', $col)) {
+                Db::run('ALTER TABLE `rma` ADD COLUMN `' . $col . '` ' . $def);
+            }
+        }
+    }
+
+    /**
+     * v6: маячок для менеджера — оплата на зворотній ТТН, коли платити мав клієнт.
+     */
+    private static function migrateV6(): void
+    {
+        $db = Env::str('DB_NAME');
+        $add = [
+            'np_cost_alert' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER `np_tracked_at`",
+            'np_cost_note'  => "VARCHAR(200) NULL AFTER `np_cost_alert`",
         ];
         foreach ($add as $col => $def) {
             if (!self::columnExists($db, 'rma', $col)) {

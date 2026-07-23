@@ -520,6 +520,11 @@ class NovaPoshta
                 'light_possible' => !empty($row['PossibilityLightReturn']),
                 'light_ttn'      => (string)($row['LightReturnNumber'] ?? ''),
                 'light_reason'   => (string)($row['UndeliveryReasonsSubtypeDescription'] ?? ''),
+                // хто оплачує доставку та чи є грошові навантаження на ТТН
+                'payer_type'    => (string)($row['PayerType'] ?? ''),
+                'cod_sum'       => (float)($row['AfterpaymentOnGoodsCost'] ?? 0),
+                'backward_sum'  => (float)($row['BackwardDeliverySum'] ?? 0),
+                'document_cost' => (float)($row['DocumentCost'] ?? 0),
             ];
         }
         return $out;

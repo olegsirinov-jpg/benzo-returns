@@ -268,10 +268,31 @@ class Rma
             return ['ok' => false, 'status' => '', 'error' => 'Нова пошта не повернула статус'];
         }
 
-        Db::update('rma', [
+        $upd = [
             'np_track_status' => $info['status'],
             'np_tracked_at'   => date('Y-m-d H:i:s'),
-        ], 'id = ?', [$rmaId]);
+        ];
+
+        // Маячок: доставку мав оплатити клієнт, але на ТТН з'явилась оплата
+        // (доставку сплачує отримувач-магазин або є накладений платіж/переказ).
+        [$alert, $note] = self::npCostAlert($rma, $info);
+        $wasAlert = (int)($rma['np_cost_alert'] ?? 0) === 1;
+        $upd['np_cost_alert'] = $alert ? 1 : 0;
+        $upd['np_cost_note']  = $alert ? $note : null;
+
+        Db::update('rma', $upd, 'id = ?', [$rmaId]);
+
+        // Сповіщаємо менеджера один раз — коли маячок щойно з'явився.
+        if ($alert && !$wasAlert) {
+            self::comment($rmaId, '⚠️ Оплата на зворотній ТТН, хоча платити мав клієнт. ' . $note, 'system', 'Система');
+            self::log($rmaId, 'Оплата на ТТН (маячок)', null, $note, 'Виявлено під час трекінгу НП', null, 'Система');
+            try {
+                $fresh = self::find($rmaId);
+                if ($fresh !== null) { Telegram::costAlert($fresh, $note); }
+            } catch (\Throwable $e) {
+                error_log('Telegram: ' . $e->getMessage());
+            }
+        }
 
         $target = NovaPoshta::trackingTargetStatus($info['code']);
         if ($target !== null) {
@@ -279,6 +300,41 @@ class Rma
         }
 
         return ['ok' => true, 'status' => $info['status'], 'error' => ''];
+    }
+
+    /**
+     * Чи є на зворотній ТТН оплата, яку по факту нестиме магазин,
+     * тоді як за умовами доставку мав оплатити клієнт.
+     *
+     * @param array<string,mixed> $rma
+     * @param array<string,mixed> $info дані трекінгу НП
+     * @return array{0:bool,1:string} [прапорець, опис]
+     */
+    private static function npCostAlert(array $rma, array $info): array
+    {
+        if ((string)($rma['shipping_payer'] ?? '') !== 'customer') {
+            return [false, ''];
+        }
+        $payer    = (string)($info['payer_type'] ?? '');
+        $cod      = (float)($info['cod_sum'] ?? 0);
+        $backward = (float)($info['backward_sum'] ?? 0);
+
+        $parts = [];
+        // У поверненні клієнт — відправник, магазин — отримувач.
+        // Якщо платник доставки не відправник — платимо ми.
+        if ($payer !== '' && $payer !== 'Sender') {
+            $parts[] = 'доставку оплачує отримувач (магазин)';
+        }
+        if ($cod > 0) {
+            $parts[] = 'накладений платіж ' . rtrim(rtrim(number_format($cod, 2, '.', ' '), '0'), '.') . ' грн';
+        }
+        if ($backward > 0) {
+            $parts[] = 'зворотний переказ коштів ' . rtrim(rtrim(number_format($backward, 2, '.', ' '), '0'), '.') . ' грн';
+        }
+        if ($parts === []) {
+            return [false, ''];
+        }
+        return [true, 'За ТТН: ' . implode('; ', $parts) . '.'];
     }
 
     /**
