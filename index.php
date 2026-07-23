@@ -24,6 +24,7 @@ $router->get('/returns/success', 'PublicController@success');
 $router->get('/returns/status', 'PublicController@statusForm');
 $router->post('/returns/status', 'PublicController@statusShow');
 $router->post('/returns/ttn', 'PublicController@addTtn');
+$router->post('/returns/refund-details', 'PublicController@saveRefundDetails');
 
 // ---- Авторизація ----
 $router->get('/admin/login', 'AuthController@loginForm');

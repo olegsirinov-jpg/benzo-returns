@@ -305,6 +305,14 @@ $canReject = App\Workflow::canReject($status);
             <?php if ((string)$rma['desired_action'] === 'refund' || $rma['refund_iban']): ?>
             <div class="card">
                 <div class="card__title">5. Реквізити для повернення коштів</div>
+                <?php if (empty($rma['refund_iban'])): ?>
+                    <div class="alert alert--info" style="margin-top:0">
+                        Клієнт ще не вказав реквізити. Не заповнюйте вручну — надішліть йому посилання:
+                        у блоці «SMS / Viber клієнту» нижче оберіть шаблон
+                        <strong>«Запросити реквізити для повернення коштів»</strong>.
+                        Клієнт впише IBAN сам зручною формою з підказками.
+                    </div>
+                <?php endif; ?>
                 <div class="field">
                     <label class="label">ПІБ отримувача</label>
                     <input class="input" type="text" name="refund_name" value="<?= e((string)$rma['refund_name']) ?>">

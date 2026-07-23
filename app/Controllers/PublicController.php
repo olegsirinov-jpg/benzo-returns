@@ -506,6 +506,66 @@ class PublicController
     }
 
     /**
+     * Клієнт сам вписує реквізити для повернення коштів.
+     * Потрібно, коли менеджер змінив дію на «повернення коштів» уже після
+     * оформлення заявки — щоб не випитувати IBAN у клієнта по телефону.
+     */
+    public function saveRefundDetails(): void
+    {
+        Csrf::verify();
+
+        $rmaId = Session::get('_status_rma');
+        if (!is_int($rmaId)) {
+            Session::flash('error', 'Сесія завершилась. Відкрийте заявку за посиланням ще раз.');
+            Response::redirect('/returns/status');
+        }
+        $rma = Rma::find($rmaId);
+        if ($rma === null) {
+            Response::redirect('/returns/status');
+            return;
+        }
+
+        $name = Validate::text((string)($_POST['refund_name'] ?? ''), 190);
+        $iban = Validate::iban((string)($_POST['refund_iban'] ?? ''));
+        $tax  = Validate::taxId((string)($_POST['refund_tax_id'] ?? ''));
+        $bank = Validate::text((string)($_POST['refund_bank'] ?? ''), 190);
+
+        $errors = [];
+        if ($name === '') {
+            $errors[] = 'Вкажіть ПІБ отримувача.';
+        }
+        if ($iban === null) {
+            $errors[] = 'IBAN має починатися з UA і містити 29 символів. Це не номер картки, а рахунок.';
+        }
+        if ($tax === null) {
+            $errors[] = 'ІПН/РНОКПП — 10 цифр, ЄДРПОУ — 8.';
+        }
+        if ($errors !== []) {
+            Session::flash('error', implode(' ', $errors));
+            Session::keepOld($_POST);
+            Response::redirect('/returns/status');
+        }
+
+        Db::update('rma', [
+            'refund_name'   => $name,
+            'refund_iban'   => $iban,
+            'refund_tax_id' => $tax,
+            'refund_bank'   => $bank ?: null,
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ], 'id = ?', [$rmaId]);
+
+        Rma::log($rmaId, 'Реквізити', null, 'IBAN ' . $iban, 'Клієнт вказав реквізити', null, 'Клієнт');
+
+        // якщо чекали реквізити — рухаємо статус далі
+        if ((string)$rma['status'] === 'waiting_payment_details') {
+            Rma::setStatus($rmaId, 'refund_pending');
+        }
+
+        Session::flash('success', 'Дякуємо! Реквізити збережено, менеджер оформить повернення коштів.');
+        Response::redirect('/returns/status');
+    }
+
+    /**
      * Клієнт додає ТТН відправлення.
      */
     public function addTtn(): void

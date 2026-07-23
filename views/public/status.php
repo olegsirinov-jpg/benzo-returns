@@ -73,6 +73,59 @@ $comments = $comments ?? [];
         </div>
     <?php endif; ?>
 
+    <?php
+    // Реквізити потрібні, якщо обрано повернення коштів, а їх ще немає
+    $needRefundDetails = (string)$rma['desired_action'] === 'refund'
+        && empty($rma['refund_iban'])
+        && !in_array($status, ['refunded', 'closed', 'cancelled', 'rejected'], true);
+    ?>
+    <?php if ($needRefundDetails): ?>
+        <div class="card">
+            <h2 class="mt0">Реквізити для повернення коштів</h2>
+            <p>Щоб ми повернули кошти, вкажіть, будь ласка, реквізити вашого <strong>рахунку</strong>.</p>
+
+            <details class="help">
+                <summary>Де взяти ці реквізити?</summary>
+                <div class="help__body">
+                    <ul>
+                        <li><strong>IBAN</strong> — номер рахунку у форматі UA…</li>
+                        <li><strong>ІПН / РНОКПП</strong> отримувача коштів</li>
+                        <li><strong>ПІБ</strong> отримувача коштів</li>
+                    </ul>
+                    <p class="mb0">
+                        Ці дані є у вашому банківському додатку в розділі «Реквізити картки»,
+                        «Реквізити рахунку» або «Довідка з реквізитами».
+                    </p>
+                </div>
+            </details>
+
+            <form method="post" action="<?= e(url('/returns/refund-details')) ?>">
+                <?= App\Csrf::field() ?>
+                <div class="grid2">
+                    <div class="field">
+                        <label class="label" for="rd_name">ПІБ отримувача <span class="req">*</span></label>
+                        <input class="input" type="text" id="rd_name" name="refund_name" value="<?= e(old('refund_name')) ?>">
+                    </div>
+                    <div class="field">
+                        <label class="label" for="rd_tax">ІПН / РНОКПП <span class="req">*</span></label>
+                        <input class="input" type="text" id="rd_tax" name="refund_tax_id" value="<?= e(old('refund_tax_id')) ?>" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="rd_iban">IBAN <span class="req">*</span></label>
+                    <input class="input mono" type="text" id="rd_iban" name="refund_iban"
+                           value="<?= e(old('refund_iban')) ?>" placeholder="UA00 0000 0000 0000 0000 0000 00000" spellcheck="false">
+                    <div class="hint">Це <strong>не номер картки</strong>, а рахунок у форматі UA…</div>
+                </div>
+                <div class="field">
+                    <label class="label" for="rd_bank">Назва банку <span class="muted">(необовʼязково)</span></label>
+                    <input class="input" type="text" id="rd_bank" name="refund_bank" value="<?= e(old('refund_bank')) ?>">
+                </div>
+                <button class="btn" type="submit">Надіслати реквізити</button>
+            </form>
+        </div>
+    <?php endif; ?>
+
     <?php if ($approved): ?>
         <div class="card">
             <h2 class="mt0">Ваше повернення погоджено — інструкція для відправки</h2>

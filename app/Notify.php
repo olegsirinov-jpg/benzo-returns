@@ -114,6 +114,16 @@ class Notify
             $out['ttn'] = ['label' => 'Надіслати ТТН повернення', 'text' => $text];
         }
 
+        // Якщо повернення коштів, а реквізитів ще немає — шаблон із проханням їх вказати.
+        if (($rma['desired_action'] ?? '') === 'refund' && empty($rma['refund_iban'])) {
+            $out['refund_details'] = [
+                'label' => 'Запросити реквізити для повернення коштів',
+                'text'  => 'Повернення ' . (string)$rma['rma_number'] . ': кошти повернемо на ваш рахунок. '
+                         . 'Будь ласка, вкажіть реквізити (IBAN, ІПН, ПІБ) за посиланням — це займе хвилину: '
+                         . Rma::publicUrl($rma),
+            ];
+        }
+
         foreach (['need_more_info', 'approved', 'received', 'refunded', 'rejected', 'created'] as $event) {
             $tpl = self::template($rma, $event);
             $out[$event] = ['label' => $tpl['subject'], 'text' => $tpl['sms']];
