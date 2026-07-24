@@ -7,9 +7,15 @@ class Telegram
 {
     public static function enabled(): bool
     {
-        return Env::bool('TG_ENABLED', false)
-            && Env::str('TG_BOT_TOKEN') !== ''
-            && Env::str('TG_CHAT_ID') !== '';
+        return Config::bool('tg_enabled', false)
+            && Config::str('tg_bot_token') !== ''
+            && Config::str('tg_chat_id') !== '';
+    }
+
+    /** Чи ввімкнено конкретну подію (за замовчуванням — так). */
+    public static function event(string $key): bool
+    {
+        return self::enabled() && Config::bool('tg_ev_' . $key, true);
     }
 
     /**
@@ -18,6 +24,7 @@ class Telegram
      */
     public static function newRma(array $rma): bool
     {
+        if (!self::event('new')) { return false; }
         $items = Rma::items((int)$rma['id']);
         $first = $items[0] ?? null;
 
@@ -52,6 +59,7 @@ class Telegram
      */
     public static function ttnAdded(array $rma, string $ttn): bool
     {
+        if (!self::event('ttn')) { return false; }
         $items = Rma::items((int)$rma['id']);
         $first = $items[0] ?? null;
 
@@ -75,6 +83,7 @@ class Telegram
      */
     public static function costAlert(array $rma, string $note): bool
     {
+        if (!self::event('cost')) { return false; }
         $lines = [
             '⚠️ <b>Оплата на зворотній ТТН — платити мав клієнт</b>',
             '',
@@ -95,6 +104,7 @@ class Telegram
      */
     public static function stale(array $rma, int $hours): bool
     {
+        if (!self::event('stale')) { return false; }
         $lines = [
             '⏰ <b>Заявка на повернення очікує обробки понад ' . $hours . ' годин</b>',
             '',
@@ -114,10 +124,36 @@ class Telegram
             self::log('Пропущено (вимкнено): ' . mb_substr(strip_tags($text), 0, 120));
             return false;
         }
+        return self::deliver($text, $chatId ?? Config::str('tg_chat_id')) === '';
+    }
 
-        $url = 'https://api.telegram.org/bot' . Env::str('TG_BOT_TOKEN') . '/sendMessage';
+    /**
+     * Тестова відправка — не залежить від прапорця «увімкнено»,
+     * але потрібні збережені токен і Chat ID.
+     *
+     * @return array{ok:bool,error:string}
+     */
+    public static function sendTest(): array
+    {
+        if (Config::str('tg_bot_token') === '' || Config::str('tg_chat_id') === '') {
+            return ['ok' => false, 'error' => 'Спершу збережіть токен бота та Chat ID.'];
+        }
+        $err = self::deliver(
+            '✅ <b>Тестове повідомлення</b>' . "\n" .
+            'Сервіс повернень підключено до цього чату. Сюди приходитимуть сповіщення.',
+            Config::str('tg_chat_id')
+        );
+        return ['ok' => $err === '', 'error' => $err];
+    }
+
+    /**
+     * Власне доставка в Telegram. Повертає '' при успіху або текст помилки.
+     */
+    private static function deliver(string $text, string $chatId): string
+    {
+        $url = 'https://api.telegram.org/bot' . Config::str('tg_bot_token') . '/sendMessage';
         $payload = [
-            'chat_id'                  => $chatId ?? Env::str('TG_CHAT_ID'),
+            'chat_id'                  => $chatId,
             'text'                     => $text,
             'parse_mode'               => 'HTML',
             'disable_web_page_preview' => true,
@@ -136,10 +172,19 @@ class Telegram
         curl_close($ch);
 
         if ($body === false || $code !== 200) {
-            self::log('Помилка ' . $code . ': ' . ($err !== '' ? $err : substr((string)$body, 0, 300)));
-            return false;
+            $detail = $err !== '' ? $err : substr((string)$body, 0, 300);
+            self::log('Помилка ' . $code . ': ' . $detail);
+            // дістаємо людський опис із відповіді Telegram
+            $desc = '';
+            if (is_string($body)) {
+                $j = json_decode($body, true);
+                if (is_array($j) && !empty($j['description'])) {
+                    $desc = (string)$j['description'];
+                }
+            }
+            return 'Telegram: ' . ($desc !== '' ? $desc : ('код ' . $code . ($detail !== '' ? ', ' . $detail : '')));
         }
-        return true;
+        return '';
     }
 
     private static function log(string $message): void

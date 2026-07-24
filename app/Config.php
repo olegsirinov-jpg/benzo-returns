@@ -60,6 +60,16 @@ class Config
             'np_recip_cp_ref'       => ['env' => '', 'type' => 'str', 'secret' => false],
             'np_recip_contact_ref'  => ['env' => '', 'type' => 'str', 'secret' => false],
             'np_recip_phone'        => ['env' => '', 'type' => 'str', 'secret' => false],
+
+            // Telegram-сповіщення менеджеру
+            'tg_enabled'        => ['env' => 'TG_ENABLED',   'type' => 'bool', 'secret' => false],
+            'tg_bot_token'      => ['env' => 'TG_BOT_TOKEN', 'type' => 'str',  'secret' => true],
+            'tg_chat_id'        => ['env' => 'TG_CHAT_ID',   'type' => 'str',  'secret' => false],
+            // які події надсилати (за замовчуванням усі)
+            'tg_ev_new'         => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'tg_ev_ttn'         => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'tg_ev_cost'        => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'tg_ev_stale'       => ['env' => '', 'type' => 'bool', 'secret' => false],
         ];
     }
 

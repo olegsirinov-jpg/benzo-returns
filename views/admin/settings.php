@@ -240,6 +240,57 @@ $adminEmail = (string)(App\Auth::user()['email'] ?? '');
         </p>
     </div>
 
+    <!-- ==================== Telegram ==================== -->
+    <div class="card">
+        <div class="card__title">Telegram — сповіщення менеджеру</div>
+        <p class="small muted">
+            Бот надсилає сповіщення про заявки у ваш чат або групу. Оберіть нижче, які події надсилати.
+        </p>
+
+        <label class="check">
+            <input type="checkbox" name="tg_enabled" value="1" <?= Config::bool('tg_enabled') ? 'checked' : '' ?>>
+            <span>Надсилати сповіщення в Telegram</span>
+        </label>
+
+        <div class="grid2 mt16">
+            <div class="field">
+                <label class="label" for="tg_bot_token">Токен бота</label>
+                <input class="input" type="password" id="tg_bot_token" name="tg_bot_token"
+                       placeholder="<?= Config::isSet('tg_bot_token') ? '•••••••• (збережено)' : 'не задано' ?>"
+                       autocomplete="new-password">
+                <div class="hint">Отримайте у <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> → /newbot. Лишіть порожнім, щоб не змінювати.</div>
+            </div>
+            <div class="field">
+                <label class="label" for="tg_chat_id">Chat ID</label>
+                <input class="input mono" type="text" id="tg_chat_id" name="tg_chat_id"
+                       value="<?= e(Config::str('tg_chat_id')) ?>" placeholder="напр. 123456789 або -1001234567890">
+                <div class="hint">ID вашого чату або групи. Дізнатися: напишіть боту, потім відкрийте <span class="mono">t.me/getmyid_bot</span>, або додайте бота в групу.</div>
+            </div>
+        </div>
+
+        <div class="field mb0">
+            <label class="label">Які події надсилати</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                <label class="check mb0">
+                    <input type="checkbox" name="tg_ev_new" value="1" <?= Config::bool('tg_ev_new', true) ? 'checked' : '' ?>>
+                    <span>🔁 Нова заявка на повернення</span>
+                </label>
+                <label class="check mb0">
+                    <input type="checkbox" name="tg_ev_ttn" value="1" <?= Config::bool('tg_ev_ttn', true) ? 'checked' : '' ?>>
+                    <span>📦 Клієнт додав / оформив ТТН повернення</span>
+                </label>
+                <label class="check mb0">
+                    <input type="checkbox" name="tg_ev_cost" value="1" <?= Config::bool('tg_ev_cost', true) ? 'checked' : '' ?>>
+                    <span>💸 Оплата на зворотній ТТН (мав платити клієнт)</span>
+                </label>
+                <label class="check mb0">
+                    <input type="checkbox" name="tg_ev_stale" value="1" <?= Config::bool('tg_ev_stale', true) ? 'checked' : '' ?>>
+                    <span>⏰ Заявка довго очікує обробки</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
     <div class="btn-row" style="margin-bottom:20px">
         <button class="btn" type="submit">Зберегти налаштування</button>
     </div>
@@ -337,6 +388,16 @@ $adminEmail = (string)(App\Auth::user()['email'] ?? '');
                 <input class="input" type="tel" id="test_sms" name="to" placeholder="067 123 45 67">
             </div>
             <button class="btn btn--ghost btn--sm" type="submit">Надіслати тестове повідомлення</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card__title">Перевірити Telegram</div>
+        <form method="post" action="<?= e(url('/admin/settings/test')) ?>">
+            <?= App\Csrf::field() ?>
+            <input type="hidden" name="type" value="telegram">
+            <p class="small muted">Надішле тестове повідомлення у збережений чат. Спершу збережіть токен і Chat ID вище.</p>
+            <button class="btn btn--ghost btn--sm" type="submit">Надіслати тест у Telegram</button>
         </form>
     </div>
 </div>

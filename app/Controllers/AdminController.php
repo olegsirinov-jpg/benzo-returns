@@ -943,9 +943,10 @@ class AdminController
         Auth::requireAdmin();
 
         $values = [];
-        foreach (array_keys(\App\Config::schema()) as $key) {
-            // чекбокси приходять лише коли ввімкнені
-            if (in_array($key, ['mail_enabled', 'sms_enabled'], true)) {
+        foreach (\App\Config::schema() as $key => $def) {
+            // булеві — це чекбокси: приходять лише коли ввімкнені,
+            // тож завжди виставляємо 1/0 (щоб можна було й вимкнути)
+            if (($def['type'] ?? '') === 'bool') {
                 $values[$key] = !empty($_POST[$key]) ? '1' : '0';
             } elseif (array_key_exists($key, $_POST)) {
                 $values[$key] = (string)$_POST[$key];
@@ -998,6 +999,14 @@ class AdminController
             $r['ok']
                 ? Session::flash('success', 'Тестове повідомлення надіслано на ' . \App\Validate::phoneFormat($phone) . '.')
                 : Session::flash('error', 'SMS не надіслано: ' . $r['error']);
+            Response::redirect('/admin/settings');
+        }
+
+        if ($type === 'telegram') {
+            $r = \App\Telegram::sendTest();
+            $r['ok']
+                ? Session::flash('success', 'Тестове повідомлення надіслано в Telegram. Перевірте чат.')
+                : Session::flash('error', $r['error']);
             Response::redirect('/admin/settings');
         }
 
