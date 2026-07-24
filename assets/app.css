@@ -368,6 +368,38 @@ a { color: var(--brand); }
 
 .login-box { max-width: 380px; margin: 60px auto; }
 
+/* ---- Компактний режим адмінки ---- */
+body.is-admin { font-size: 13.5px; line-height: 1.5; }
+body.is-admin .topbar__inner { height: 48px; }
+body.is-admin .main { padding: 16px 16px 36px; }
+body.is-admin h1 { font-size: 21px; margin-bottom: 10px; }
+body.is-admin h2 { font-size: 17px; margin: 18px 0 9px; }
+body.is-admin h3 { font-size: 15px; margin: 13px 0 6px; }
+body.is-admin .lead { font-size: 14px; }
+body.is-admin .card { padding: 14px 16px; margin-bottom: 12px; border-radius: 8px; }
+body.is-admin .card__title { font-size: 13px; margin-bottom: 10px; }
+body.is-admin .field { margin-bottom: 11px; }
+body.is-admin .label { font-size: 13px; margin-bottom: 4px; }
+body.is-admin .input,
+body.is-admin .select,
+body.is-admin .textarea { padding: 7px 10px; border-radius: 7px; }
+body.is-admin .textarea { min-height: 70px; }
+body.is-admin .btn { padding: 8px 14px; border-radius: 7px; }
+body.is-admin .btn--sm { padding: 5px 10px; font-size: 12.5px; }
+body.is-admin .btn--lg { padding: 10px 20px; font-size: 15px; }
+body.is-admin .grid2,
+body.is-admin .grid3 { gap: 12px; }
+body.is-admin .alert { padding: 9px 12px; margin-bottom: 12px; font-size: 13px; }
+body.is-admin .notice { padding: 10px 13px; margin: 12px 0; }
+body.is-admin .table th,
+body.is-admin .table td { padding: 6px 9px; }
+body.is-admin .table { font-size: 12.5px; }
+body.is-admin .kv { font-size: 13px; }
+body.is-admin .kv td { padding: 4px 0; }
+body.is-admin .badge { font-size: 11px; }
+body.is-admin .subblock { padding: 12px; }
+body.is-admin .help summary { padding: 8px 11px; }
+
 @media print {
   .topbar, .footer, .btn, .btn-row { display: none; }
   body { background: #fff; }
