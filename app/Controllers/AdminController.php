@@ -209,6 +209,22 @@ class AdminController
         $carrier = (string)($_POST['carrier'] ?? '');
         $data['carrier'] = isset(Dict::carriers()[$carrier]) ? $carrier : null;
 
+        // Ручний ввід ТТН у блоці «Доставка»: якщо перевізника не обрали —
+        // вважаємо Нову пошту (щоб працював трекінг). Джерело ТТН фіксуємо як
+        // ручне, але не чіпаємо накладну магазину чи Легке повернення.
+        if ($data['return_ttn'] !== null) {
+            if ($data['carrier'] === null) {
+                $data['carrier'] = 'novaposhta';
+            }
+            $curSrc = (string)($rma['ttn_source'] ?? '');
+            if (!in_array($curSrc, ['our_np', 'light_return'], true) && empty($rma['np_doc_ref'])) {
+                $data['ttn_source'] = 'manual';
+            }
+        } elseif (empty($rma['np_doc_ref'])) {
+            // ТТН прибрали вручну — скидаємо джерело (крім накладної магазину)
+            $data['ttn_source'] = null;
+        }
+
         $payer = (string)($_POST['shipping_payer'] ?? '');
         $data['shipping_payer'] = isset(Dict::shippingPayers()[$payer]) ? $payer : null;
 

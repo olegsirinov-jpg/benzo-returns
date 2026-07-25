@@ -255,8 +255,13 @@ class Rma
     public static function refreshNpTracking(int $rmaId): array
     {
         $rma = self::find($rmaId);
-        if ($rma === null || empty($rma['return_ttn']) || ($rma['carrier'] ?? '') !== 'novaposhta') {
-            return ['ok' => false, 'status' => '', 'error' => 'У заявці немає ТТН Нової пошти'];
+        if ($rma === null || empty($rma['return_ttn'])) {
+            return ['ok' => false, 'status' => '', 'error' => 'У заявці немає ТТН для трекінгу'];
+        }
+        // Порожній перевізник вважаємо Новою поштою (наш основний). Явно інший — не трекаємо.
+        $carrier = (string)($rma['carrier'] ?? '');
+        if ($carrier !== '' && $carrier !== 'novaposhta') {
+            return ['ok' => false, 'status' => '', 'error' => 'Трекінг доступний лише для Нової пошти'];
         }
 
         $res  = NovaPoshta::track([[
