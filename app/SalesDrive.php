@@ -520,7 +520,11 @@ class SalesDrive
             return false;
         }
 
-        $merged = $existing !== '' ? $existing . "\n\n" . $text : $text;
+        // Час зміни компактно в дужках (поле коментаря SalesDrive — звичайний текст).
+        $stamped = $text . ' (' . date('d.m.Y H:i') . ')';
+
+        // Нові зміни — зверху, над попередніми записами.
+        $merged = $existing !== '' ? $stamped . "\n" . $existing : $stamped;
 
         $resp = self::request('POST', '/api/order/update/', [
             'form' => $formKey,
