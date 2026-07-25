@@ -99,6 +99,36 @@ class Telegram
     }
 
     /**
+     * Реквізити для повернення коштів — надсилаються менеджером вручну,
+     * зручний формат для копіювання в застосунок НоваПей.
+     *
+     * @param array{name:string,iban:string,tax:string,amount:?float,rma_number:string} $d
+     * @return array{ok:bool,error:string}
+     */
+    public static function refundDetails(array $d): array
+    {
+        if (Config::str('tg_bot_token') === '' || Config::str('tg_chat_id') === '') {
+            return ['ok' => false, 'error' => 'Спершу налаштуйте Telegram (токен і Chat ID).'];
+        }
+
+        $head = ['💳 <b>Реквізити для повернення коштів</b> — ' . e($d['rma_number'])];
+
+        // Копіювальний блок — рівно у форматі для НоваПей
+        $block = 'ПІБ отримувача: ' . $d['name'] . "\n"
+               . 'IBAN: ' . $d['iban'] . "\n"
+               . 'ІПН: ' . $d['tax'] . "\n";
+        if ($d['amount'] !== null && $d['amount'] > 0) {
+            $block .= 'Сума: ' . number_format($d['amount'], 2, '.', '') . ' грн' . "\n";
+        }
+        $block .= 'Призначення: Дохід не підлягає оподаткуванню, повернення коштів';
+
+        $text = implode("\n", $head) . "\n\n<pre>" . e($block) . '</pre>';
+
+        $err = self::deliver($text, Config::str('tg_chat_id'));
+        return ['ok' => $err === '', 'error' => $err];
+    }
+
+    /**
      * Нагадування про завислу заявку (п.13.3 ТЗ).
      * @param array<string,mixed> $rma
      */

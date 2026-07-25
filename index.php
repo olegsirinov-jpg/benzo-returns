@@ -47,6 +47,7 @@ $router->get('/admin/rma/{id}/np-price', 'AdminController@npPrice');
 $router->post('/admin/rma/{id}/np-create', 'AdminController@npCreate');
 $router->post('/admin/rma/{id}/np-cancel', 'AdminController@npCancel');
 $router->post('/admin/rma/{id}/np-track', 'AdminController@npTrack');
+$router->post('/admin/rma/{id}/refund-tg', 'AdminController@refundToTelegram');
 $router->post('/admin/rma/{id}/delete', 'AdminController@delete');
 $router->get('/admin/diag', 'AdminController@diag');
 $router->post('/admin/diag', 'AdminController@diag');

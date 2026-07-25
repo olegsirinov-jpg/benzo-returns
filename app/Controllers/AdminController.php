@@ -1380,6 +1380,49 @@ class AdminController
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
+    /**
+     * Надіслати реквізити для повернення коштів у Telegram
+     * (зручний формат для копіювання в НоваПей).
+     */
+    public function refundToTelegram(string $id): void
+    {
+        Csrf::verify();
+        $rmaId = (int)$id;
+        $rma   = Rma::find($rmaId);
+        if ($rma === null) {
+            Response::redirect('/admin');
+            return;
+        }
+
+        // Беремо значення з форми (поточні на екрані), з відкатом на збережене в БД
+        $name = trim((string)($_POST['refund_name'] ?? '')) ?: (string)($rma['refund_name'] ?? '');
+        $tax  = trim((string)($_POST['refund_tax_id'] ?? '')) ?: (string)($rma['refund_tax_id'] ?? '');
+
+        $ibanRaw = trim((string)($_POST['refund_iban'] ?? ''));
+        $iban    = $ibanRaw !== '' ? (\App\Validate::iban($ibanRaw) ?? '') : (string)($rma['refund_iban'] ?? '');
+        if ($iban === '') {
+            Session::flash('error', 'Немає коректного IBAN. Заповніть і збережіть реквізити, потім надішліть.');
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
+
+        $amountRaw = str_replace([' ', ','], ['', '.'], (string)($_POST['refund_amount'] ?? ''));
+        $amount    = is_numeric($amountRaw) ? round((float)$amountRaw, 2)
+                   : ($rma['refund_amount'] !== null ? (float)$rma['refund_amount'] : null);
+
+        $r = \App\Telegram::refundDetails([
+            'name'       => $name,
+            'iban'       => $iban,
+            'tax'        => $tax,
+            'amount'     => $amount,
+            'rma_number' => (string)$rma['rma_number'],
+        ]);
+
+        $r['ok']
+            ? Session::flash('success', 'Реквізити надіслано в Telegram.')
+            : Session::flash('error', 'Не вдалося надіслати: ' . $r['error']);
+        Response::redirect('/admin/rma/' . $rmaId);
+    }
+
     /** Видалити створену накладну. */
     public function npCancel(string $id): void
     {

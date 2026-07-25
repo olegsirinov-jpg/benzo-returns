@@ -358,6 +358,16 @@ $canReject = App\Workflow::canReject($status);
                 <?php if ($rma['refund_comment']): ?>
                     <p class="hint">Коментар клієнта: <?= e($rma['refund_comment']) ?></p>
                 <?php endif; ?>
+
+                <?php if (!empty($rma['refund_iban'])): ?>
+                    <div class="btn-row" style="margin-top:14px;align-items:center">
+                        <button type="submit" class="btn btn--sm btn--ghost"
+                                formaction="<?= e(url('/admin/rma/' . $id . '/refund-tg')) ?>" formnovalidate>
+                            📤 Надіслати реквізити в Telegram
+                        </button>
+                        <span class="hint">Готовий формат для копіювання в НоваПей</span>
+                    </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 
