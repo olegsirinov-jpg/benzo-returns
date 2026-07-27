@@ -568,7 +568,11 @@ class NovaPoshta
         if (in_array($code, [9, 10, 11, 106], true)) {
             return 'received';
         }
-        if (in_array($code, [4, 5, 6, 7, 8, 41, 101, 102, 103, 104, 105, 111, 112], true)) {
+        // 7,8 — прибуло у відділення отримувача (магазину), чекає на видачу
+        if (in_array($code, [7, 8], true)) {
+            return 'arrived';
+        }
+        if (in_array($code, [4, 5, 6, 41, 101, 102, 103, 104, 105, 111, 112], true)) {
             return 'in_transit';
         }
         return null;

@@ -402,13 +402,37 @@ class Rma
     /**
      * Просунути статус лише вперед у ланцюгу доставки.
      */
+    /**
+     * Зворотні посилки, що прибули у відділення й чекають на отримання.
+     *
+     * @return array<int,array{rma_number:string,ttn:string,customer:string}>
+     */
+    public static function arrivedForPickup(): array
+    {
+        $rows = Db::all(
+            "SELECT rma_number, return_ttn, customer_name FROM rma
+             WHERE status = 'arrived' AND return_ttn IS NOT NULL AND return_ttn <> ''
+             ORDER BY id"
+        );
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                'rma_number' => (string)$r['rma_number'],
+                'ttn'        => (string)$r['return_ttn'],
+                'customer'   => (string)($r['customer_name'] ?? ''),
+            ];
+        }
+        return $out;
+    }
+
     private static function advanceStatus(int $rmaId, string $current, string $target): void
     {
         $order = [
             'approved'                  => 1,
             'waiting_customer_shipment' => 2,
             'in_transit'                => 3,
-            'received'                  => 4,
+            'arrived'                   => 4,
+            'received'                  => 5,
         ];
         $cur = $order[$current] ?? 0;
         $tgt = $order[$target] ?? 0;

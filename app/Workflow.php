@@ -21,6 +21,7 @@ class Workflow
             'approved'                  => 'Погоджено. Очікуємо, поки клієнт відправить товар і внесе ТТН.',
             'waiting_customer_shipment' => 'Очікуємо відправку від клієнта та номер ТТН.',
             'in_transit'                => 'Товар у дорозі. Позначте, коли отримаєте посилку.',
+            'arrived'                   => 'Посилка прибула у відділення. Заберіть її та позначте «Товар отримано».',
             'received'                  => 'Посилку отримано. Перевірте товар.',
             'inspection'                => 'Товар на перевірці. Ухваліть рішення — виплата, обмін або відмова.',
             'refund_approved'           => 'Виплату погоджено. Далі — очікування та повернення коштів.',
@@ -58,6 +59,7 @@ class Workflow
             case 'approved':
             case 'waiting_customer_shipment':
             case 'in_transit':
+            case 'arrived':
                 return [
                     ['status' => 'received', 'label' => 'Товар отримано', 'primary' => true],
                 ];

@@ -1429,6 +1429,22 @@ class AdminController
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
+    /** Надіслати менеджеру в Telegram список посилок до отримання. */
+    public function sendPickupList(): void
+    {
+        Csrf::verify();
+        $rows = Rma::arrivedForPickup();
+        if ($rows === []) {
+            Session::flash('success', 'Наразі немає посилок у статусі «Прибула у відділення».');
+            Response::redirect('/admin');
+        }
+        $r = \App\Telegram::pickupList($rows);
+        $r['ok']
+            ? Session::flash('success', 'Надіслано в Telegram: ' . $r['count'] . ' посилок до отримання.')
+            : Session::flash('error', 'Не вдалося надіслати: ' . $r['error']);
+        Response::redirect('/admin');
+    }
+
     /** Позначити проблему при огляді посилки + сповістити в Telegram. */
     public function flagIssue(string $id): void
     {

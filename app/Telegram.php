@@ -99,6 +99,37 @@ class Telegram
     }
 
     /**
+     * Список зворотних посилок, що прибули у відділення й чекають на отримання.
+     *
+     * @param array<int,array{rma_number:string,ttn:string,customer:string}> $rows
+     * @return array{ok:bool,error:string,count:int}
+     */
+    public static function pickupList(array $rows): array
+    {
+        if (Config::str('tg_bot_token') === '' || Config::str('tg_chat_id') === '') {
+            return ['ok' => false, 'error' => 'Спершу налаштуйте Telegram (токен і Chat ID).', 'count' => 0];
+        }
+
+        $count = count($rows);
+        $wh = trim(Config::str('np_recipient_city_name') . ', ' . Config::str('np_recipient_wh_name'), ', ');
+
+        $lines = ['📥 <b>Посилки до отримання</b> — ' . $count . ' шт.'];
+        if ($wh !== '') {
+            $lines[] = 'Відділення: ' . e($wh);
+        }
+        $lines[] = '';
+        foreach ($rows as $i => $r) {
+            $lines[] = ($i + 1) . '. <code>' . e($r['ttn']) . '</code> — ' . e($r['rma_number'])
+                     . ($r['customer'] !== '' ? ' (' . e($r['customer']) . ')' : '');
+        }
+        $lines[] = '';
+        $lines[] = 'Заберіть посилки й позначте «Товар отримано» у відповідних заявках.';
+
+        $err = self::deliver(implode("\n", $lines), Config::str('tg_chat_id'));
+        return ['ok' => $err === '', 'error' => $err, 'count' => $count];
+    }
+
+    /**
      * Проблема при огляді посилки — менеджер позначає вручну.
      * @param array<string,mixed> $rma
      */

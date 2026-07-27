@@ -38,7 +38,7 @@ $rows = Db::all(
     "SELECT id FROM rma
      WHERE carrier = 'novaposhta'
        AND return_ttn IS NOT NULL AND return_ttn <> ''
-       AND status IN ('approved','waiting_customer_shipment','in_transit')
+       AND status IN ('approved','waiting_customer_shipment','in_transit','arrived')
      ORDER BY id
      LIMIT 100"
 );

@@ -23,6 +23,14 @@ $newCount = ($counts['new'] ?? 0);
     </h1>
     <div class="btn-row">
         <a class="btn btn--sm" href="<?= e(url('/admin/rma-new')) ?>">+ Нова заявка</a>
+        <?php $arrivedCount = (int)($counts['arrived'] ?? 0); ?>
+        <form method="post" action="<?= e(url('/admin/pickup-list')) ?>" style="display:inline"
+              title="Надіслати менеджеру в Telegram ТТН посилок, що прибули у відділення">
+            <?= App\Csrf::field() ?>
+            <button class="btn btn--sm <?= $arrivedCount ? '' : 'btn--ghost' ?>" type="submit">
+                📥 До отримання<?= $arrivedCount ? ' (' . $arrivedCount . ')' : '' ?>
+            </button>
+        </form>
         <a class="btn btn--ghost btn--sm" href="<?= e(url('/admin/export' . $qs([]))) ?>">Експорт CSV</a>
         <a class="btn btn--ghost btn--sm" href="<?= e(url('/admin/stats')) ?>">Статистика</a>
     </div>

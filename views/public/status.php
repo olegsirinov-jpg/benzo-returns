@@ -37,6 +37,7 @@ $comments = $comments ?? [];
     // Погоджено, клієнт має відправити товар
     $approved  = in_array($status, ['approved', 'waiting_customer_shipment'], true);
     $inTransit = $status === 'in_transit';
+    $arrived   = $status === 'arrived';
 
     // Звідки взялася ТТН повернення
     $returnTtn = trim((string)($rma['return_ttn'] ?? ''));
@@ -168,7 +169,7 @@ $comments = $comments ?? [];
             </p>
         </div>
 
-    <?php elseif ($isManual && ($approved || $inTransit)): ?>
+    <?php elseif ($isManual && ($approved || $inTransit || $arrived)): ?>
         <?php // Клієнт відправив сам і вказав ТТН ?>
         <div class="card">
             <div class="alert alert--info" style="margin-top:0">
@@ -326,6 +327,11 @@ $comments = $comments ?? [];
     <?php elseif ($status === 'received' || $status === 'inspection'): ?>
         <div class="alert alert--info">
             Ми отримали товар за заявкою <?= e($rma['rma_number']) ?>. Зараз він проходить перевірку.
+        </div>
+    <?php elseif ($arrived): ?>
+        <div class="alert alert--info">
+            Ваша посилка вже у нашому відділенні Нової пошти. Найближчим часом ми її отримаємо
+            та перевіримо — ви отримаєте повідомлення.
         </div>
     <?php elseif ($inTransit && !$isLight && !$isManual): ?>
         <div class="alert alert--info">
