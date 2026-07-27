@@ -729,31 +729,37 @@ $canReject = App\Workflow::canReject($status);
 
         <!-- ==================== Історія ==================== -->
         <div class="card">
-            <div class="card__title">Історія змін</div>
-            <?php if ($history === []): ?>
-                <p class="muted small mb0">Записів немає.</p>
-            <?php else: ?>
-                <ul class="timeline">
-                    <?php foreach ($history as $h): ?>
-                        <li>
-                            <div class="timeline__time"><?= dt((string)$h['created_at']) ?></div>
-                            <div>
-                                <strong><?= e($h['user_name']) ?></strong> —
-                                <?php if ($h['field'] === 'created'): ?>
-                                    створив(ла) заявку <span class="mono"><?= e($h['new_value']) ?></span>
-                                <?php elseif ($h['field'] === 'status'): ?>
-                                    змінив(ла) статус з «<?= e($h['old_value']) ?>» на «<strong><?= e($h['new_value']) ?></strong>»
-                                <?php else: ?>
-                                    <?= e($h['field']) ?>: «<?= e(str_limit((string)$h['old_value'], 40)) ?>» → «<strong><?= e(str_limit((string)$h['new_value'], 40)) ?></strong>»
-                                <?php endif; ?>
-                            </div>
-                            <?php if ($h['comment']): ?>
-                                <div class="small muted"><?= e($h['comment']) ?></div>
-                            <?php endif; ?>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
+            <details class="fold">
+                <summary class="card__title" style="margin:0;cursor:pointer">
+                    Історія змін <span class="muted" style="font-weight:400">— записів: <?= count($history) ?> (розгорнути)</span>
+                </summary>
+                <div style="margin-top:14px">
+                    <?php if ($history === []): ?>
+                        <p class="muted small mb0">Записів немає.</p>
+                    <?php else: ?>
+                        <ul class="timeline">
+                            <?php foreach ($history as $h): ?>
+                                <li>
+                                    <div class="timeline__time"><?= dt((string)$h['created_at']) ?></div>
+                                    <div>
+                                        <strong><?= e($h['user_name']) ?></strong> —
+                                        <?php if ($h['field'] === 'created'): ?>
+                                            створив(ла) заявку <span class="mono"><?= e($h['new_value']) ?></span>
+                                        <?php elseif ($h['field'] === 'status'): ?>
+                                            змінив(ла) статус з «<?= e($h['old_value']) ?>» на «<strong><?= e($h['new_value']) ?></strong>»
+                                        <?php else: ?>
+                                            <?= e($h['field']) ?>: «<?= e(str_limit((string)$h['old_value'], 40)) ?>» → «<strong><?= e(str_limit((string)$h['new_value'], 40)) ?></strong>»
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($h['comment']): ?>
+                                        <div class="small muted"><?= e($h['comment']) ?></div>
+                                    <?php endif; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </details>
         </div>
 
         <!-- ==================== Огляд посилки ==================== -->
