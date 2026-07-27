@@ -137,6 +137,16 @@ class Validate
         return $v;
     }
 
+    /**
+     * Схоже на номер накладної (ТТН) Нової пошти — рівно 14 цифр.
+     * Клієнти інколи вставляють ТТН замість номера замовлення.
+     */
+    public static function looksLikeNpTtn(string $raw): bool
+    {
+        $v = preg_replace('/\s+/', '', trim($raw)) ?? '';
+        return (bool)preg_match('/^\d{14}$/', $v);
+    }
+
     /** @param array<string,string> $dict */
     public static function inDict(string $value, array $dict): bool
     {

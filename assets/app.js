@@ -83,6 +83,16 @@
     });
   });
 
+  // Миттєва підказка: у полі номера замовлення введено ТТН (14 цифр)
+  var orderEl = $('#order_number');
+  var ttnWarn = $('#ttn-warn');
+  if (orderEl && ttnWarn) {
+    orderEl.addEventListener('input', function () {
+      var digits = orderEl.value.replace(/\s+/g, '');
+      ttnWarn.classList.toggle('hidden', !/^\d{14}$/.test(digits));
+    });
+  }
+
   lookupBtn.addEventListener('click', function () {
     var order = $('#order_number').value.trim();
     var phone = $('#phone').value.trim();
@@ -120,11 +130,17 @@
         if (res.found) {
           renderOrder(res.order);
           resultBox.innerHTML = alertBox('success', 'Замовлення знайдено. Оберіть товари для повернення нижче.');
+          openRest();
+        } else if (res.ttn_hint) {
+          // Введено ТТН замість номера замовлення — не пускаємо далі, просимо виправити
+          resultBox.innerHTML = alertBox('error', res.message);
+          var of = $('#order_number');
+          if (of) { of.focus(); of.select && of.select(); }
         } else {
           resultBox.innerHTML = alertBox('warn', res.message);
           useManual();
+          openRest();
         }
-        openRest();
       })
       .catch(function () {
         resultBox.innerHTML = alertBox('warn',

@@ -35,7 +35,11 @@ $cls = function (string $key, string $base) use ($errors) {
                 <label class="label" for="order_number">Номер замовлення <span class="req">*</span></label>
                 <input class="<?= $cls('order_number', 'input') ?>" type="text" id="order_number" name="order_number"
                        value="<?= e(old('order_number', $restore['order_number'] ?? '')) ?>" autocomplete="off" inputmode="numeric">
-                <div class="hint">Номер вказаний у СМС або листі про підтвердження замовлення.</div>
+                <div class="hint">Номер вказаний у СМС або листі про підтвердження замовлення. Це <strong>не</strong> номер накладної Нової пошти.</div>
+                <div class="error-text hidden" id="ttn-warn">
+                    Схоже, це номер накладної Нової пошти (ТТН), а не номер замовлення.
+                    Номер замовлення коротший — знайдіть його в SMS або листі про підтвердження замовлення.
+                </div>
                 <?= $err('order_number') ?>
             </div>
             <div class="field">
