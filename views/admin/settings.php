@@ -295,6 +295,34 @@ $adminEmail = (string)(App\Auth::user()['email'] ?? '');
         </div>
     </div>
 
+    <!-- ==================== Доступ менеджерів ==================== -->
+    <div class="card">
+        <div class="card__title">Що бачать прості менеджери в картці</div>
+        <p class="small muted">
+            Приберіть зайві блоки для звичайних менеджерів — щоб вони просто приймали повернення,
+            перевіряли товар і позначали проблему. <strong>Ви (адміністратор) завжди бачите всі блоки.</strong>
+            Позначене — показується менеджерам.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+            <label class="check mb0">
+                <input type="checkbox" name="mgr_blk_refund" value="1" <?= Config::bool('mgr_blk_refund', true) ? 'checked' : '' ?>>
+                <span>💳 Реквізити для повернення коштів</span>
+            </label>
+            <label class="check mb0">
+                <input type="checkbox" name="mgr_blk_delivery" value="1" <?= Config::bool('mgr_blk_delivery', true) ? 'checked' : '' ?>>
+                <span>🚚 Доставка (ТТН, дати, оплата)</span>
+            </label>
+            <label class="check mb0">
+                <input type="checkbox" name="mgr_blk_np" value="1" <?= Config::bool('mgr_blk_np', true) ? 'checked' : '' ?>>
+                <span>📦 Зворотна накладна Нової пошти</span>
+            </label>
+            <label class="check mb0">
+                <input type="checkbox" name="mgr_blk_sms" value="1" <?= Config::bool('mgr_blk_sms', true) ? 'checked' : '' ?>>
+                <span>✉️ SMS / Viber клієнту</span>
+            </label>
+        </div>
+    </div>
+
     <div class="btn-row" style="margin-bottom:20px">
         <button class="btn" type="submit">Зберегти налаштування</button>
     </div>

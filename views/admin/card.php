@@ -17,6 +17,14 @@ $btn = function (string $status, string $label, string $class = 'btn--ghost') us
          . '<button class="btn btn--sm ' . $class . '" type="submit">' . e($label) . '</button>'
          . '</form>';
 };
+
+/**
+ * Чи показувати блок картки. Адмін бачить усе; простий менеджер — лише
+ * дозволені в Налаштуваннях блоки (ключ cfg_mgr_blk_*, за замовч. видно).
+ */
+$showBlk = function (string $key): bool {
+    return App\Auth::isAdmin() || App\Config::bool('mgr_blk_' . $key, true);
+};
 ?>
 
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
@@ -318,7 +326,7 @@ $canReject = App\Workflow::canReject($status);
             })();
             </script>
 
-            <?php if ((string)$rma['desired_action'] === 'refund' || $rma['refund_iban']): ?>
+            <?php if (($rma['desired_action'] === 'refund' || $rma['refund_iban']) && $showBlk('refund')): ?>
             <div class="card">
                 <div class="card__title">5. Реквізити для повернення коштів</div>
                 <?php if (empty($rma['refund_iban'])): ?>
@@ -378,6 +386,7 @@ $canReject = App\Workflow::canReject($status);
             </div>
             <?php endif; ?>
 
+            <?php if ($showBlk('delivery')): ?>
             <div class="card">
                 <details class="fold">
                     <summary class="card__title" style="margin:0;cursor:pointer">
@@ -429,6 +438,7 @@ $canReject = App\Workflow::canReject($status);
                     </div>
                 </details>
             </div>
+            <?php endif; ?>
 
             <div class="btn-row" style="margin-bottom:16px">
                 <button class="btn" type="submit">Зберегти зміни</button>
@@ -436,7 +446,7 @@ $canReject = App\Workflow::canReject($status);
         </form>
 
         <!-- ==================== Зворотна накладна НП ==================== -->
-        <?php if (!empty($npReady)): ?>
+        <?php if (!empty($npReady) && $showBlk('np')): ?>
         <div class="card">
             <div class="card__title">Зворотна накладна Нової пошти</div>
             <?php if (!empty($rma['np_doc_ref'])): ?>
@@ -626,6 +636,7 @@ $canReject = App\Workflow::canReject($status);
         <?php endif; ?>
 
         <!-- ==================== SMS / Viber клієнту (вручну) ==================== -->
+        <?php if ($showBlk('sms')): ?>
         <div class="card">
             <div class="card__title">SMS / Viber клієнту</div>
             <?php if (empty($smsEnabled)): ?>
@@ -676,6 +687,7 @@ $canReject = App\Workflow::canReject($status);
                 </script>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
 
         <!-- ==================== Сповіщення клієнту ==================== -->
         <div class="card">

@@ -71,6 +71,13 @@ class Config
             'tg_ev_cost'        => ['env' => '', 'type' => 'bool', 'secret' => false],
             'tg_ev_stale'       => ['env' => '', 'type' => 'bool', 'secret' => false],
             'tg_ev_issue'       => ['env' => '', 'type' => 'bool', 'secret' => false],
+
+            // Які блоки картки показувати простим менеджерам (адмін бачить усе).
+            // За замовчуванням усе видно.
+            'mgr_blk_refund'    => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'mgr_blk_delivery'  => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'mgr_blk_np'        => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'mgr_blk_sms'       => ['env' => '', 'type' => 'bool', 'secret' => false],
         ];
     }
 

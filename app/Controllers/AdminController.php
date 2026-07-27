@@ -202,45 +202,54 @@ class AdminController
 
         $data = [];
 
-        // доставка
-        $ttn = trim((string)($_POST['return_ttn'] ?? ''));
-        $data['return_ttn'] = $ttn === '' ? null : Validate::ttn($ttn);
+        // доставка — блок може бути прихований для простих менеджерів,
+        // тому оновлюємо ці поля лише якщо вони реально прийшли у формі
+        // (інакше збереження інших полів занулило б ТТН/дати).
+        if (array_key_exists('return_ttn', $_POST)) {
+            $ttn = trim((string)($_POST['return_ttn'] ?? ''));
+            $data['return_ttn'] = $ttn === '' ? null : Validate::ttn($ttn);
 
-        $carrier = (string)($_POST['carrier'] ?? '');
-        $data['carrier'] = isset(Dict::carriers()[$carrier]) ? $carrier : null;
+            $carrier = (string)($_POST['carrier'] ?? '');
+            $data['carrier'] = isset(Dict::carriers()[$carrier]) ? $carrier : null;
 
-        // Ручний ввід ТТН у блоці «Доставка»: якщо перевізника не обрали —
-        // вважаємо Нову пошту (щоб працював трекінг). Джерело ТТН фіксуємо як
-        // ручне, але не чіпаємо накладну магазину чи Легке повернення.
-        if ($data['return_ttn'] !== null) {
-            if ($data['carrier'] === null) {
-                $data['carrier'] = 'novaposhta';
+            // Ручний ввід ТТН: якщо перевізника не обрали — вважаємо Нову пошту
+            // (щоб працював трекінг). Не чіпаємо накладну магазину чи Легке повернення.
+            if ($data['return_ttn'] !== null) {
+                if ($data['carrier'] === null) {
+                    $data['carrier'] = 'novaposhta';
+                }
+                $curSrc = (string)($rma['ttn_source'] ?? '');
+                if (!in_array($curSrc, ['our_np', 'light_return'], true) && empty($rma['np_doc_ref'])) {
+                    $data['ttn_source'] = 'manual';
+                }
+            } elseif (empty($rma['np_doc_ref'])) {
+                $data['ttn_source'] = null;
             }
-            $curSrc = (string)($rma['ttn_source'] ?? '');
-            if (!in_array($curSrc, ['our_np', 'light_return'], true) && empty($rma['np_doc_ref'])) {
-                $data['ttn_source'] = 'manual';
-            }
-        } elseif (empty($rma['np_doc_ref'])) {
-            // ТТН прибрали вручну — скидаємо джерело (крім накладної магазину)
-            $data['ttn_source'] = null;
+
+            $payer = (string)($_POST['shipping_payer'] ?? '');
+            $data['shipping_payer'] = isset(Dict::shippingPayers()[$payer]) ? $payer : null;
+
+            $data['shipped_at']       = $this->dateOrNull((string)($_POST['shipped_at'] ?? ''));
+            $data['received_at']      = $this->dateOrNull((string)($_POST['received_at'] ?? ''));
+            $data['shipping_comment'] = Validate::text((string)($_POST['shipping_comment'] ?? ''), 1000) ?: null;
         }
 
-        $payer = (string)($_POST['shipping_payer'] ?? '');
-        $data['shipping_payer'] = isset(Dict::shippingPayers()[$payer]) ? $payer : null;
+        // реквізити / суми — блок теж прихований для частини менеджерів
+        if (array_key_exists('refund_iban', $_POST)) {
+            $data['refund_name']   = Validate::text((string)($_POST['refund_name'] ?? ''), 190) ?: null;
+            $iban                  = trim((string)($_POST['refund_iban'] ?? ''));
+            $data['refund_iban']   = $iban === '' ? null : Validate::iban($iban);
+            $data['refund_tax_id'] = Validate::taxId((string)($_POST['refund_tax_id'] ?? ''));
+            $data['refund_bank']   = Validate::text((string)($_POST['refund_bank'] ?? ''), 190) ?: null;
 
-        $data['shipped_at']       = $this->dateOrNull((string)($_POST['shipped_at'] ?? ''));
-        $data['received_at']      = $this->dateOrNull((string)($_POST['received_at'] ?? ''));
-        $data['shipping_comment'] = Validate::text((string)($_POST['shipping_comment'] ?? ''), 1000) ?: null;
+            $amount = str_replace([' ', ','], ['', '.'], (string)($_POST['refund_amount'] ?? ''));
+            $data['refund_amount'] = is_numeric($amount) ? round((float)$amount, 2) : null;
 
-        // реквізити / суми
-        $data['refund_name']   = Validate::text((string)($_POST['refund_name'] ?? ''), 190) ?: null;
-        $iban                  = trim((string)($_POST['refund_iban'] ?? ''));
-        $data['refund_iban']   = $iban === '' ? null : Validate::iban($iban);
-        $data['refund_tax_id'] = Validate::taxId((string)($_POST['refund_tax_id'] ?? ''));
-        $data['refund_bank']   = Validate::text((string)($_POST['refund_bank'] ?? ''), 190) ?: null;
-
-        $amount = str_replace([' ', ','], ['', '.'], (string)($_POST['refund_amount'] ?? ''));
-        $data['refund_amount'] = is_numeric($amount) ? round((float)$amount, 2) : null;
+            if ($iban !== '' && $data['refund_iban'] === null) {
+                Session::flash('error', 'IBAN некоректний — поле не збережено. Перевірте формат UA…');
+                unset($data['refund_iban']);
+            }
+        }
 
         // менеджер
         $manager = (string)($_POST['manager_id'] ?? '');
@@ -251,11 +260,8 @@ class AdminController
         if (isset(Dict::actions()[$action])) {
             $data['desired_action'] = $action;
         }
-        $data['exchange_wish'] = Validate::text((string)($_POST['exchange_wish'] ?? ''), 2000) ?: null;
-
-        if ($iban !== '' && $data['refund_iban'] === null) {
-            Session::flash('error', 'IBAN некоректний — поле не збережено. Перевірте формат UA…');
-            unset($data['refund_iban']);
+        if (array_key_exists('exchange_wish', $_POST)) {
+            $data['exchange_wish'] = Validate::text((string)($_POST['exchange_wish'] ?? ''), 2000) ?: null;
         }
 
         $data['updated_at'] = date('Y-m-d H:i:s');
