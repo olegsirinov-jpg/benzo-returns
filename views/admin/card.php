@@ -54,6 +54,13 @@ $btn = function (string $status, string $label, string $class = 'btn--ghost') us
     </div>
 <?php endif; ?>
 
+<?php if (!empty($rma['inspection_issue'])): ?>
+    <div class="alert alert--warn" style="margin-top:16px">
+        🛠 <strong>Проблема при огляді посилки.</strong>
+        <?= e((string)$rma['inspection_note']) ?>
+    </div>
+<?php endif; ?>
+
 <!-- ==================== Дії ==================== -->
 <?php
 $steps  = App\Workflow::nextSteps($rma);
@@ -734,6 +741,34 @@ $canReject = App\Workflow::canReject($status);
                         </li>
                     <?php endforeach; ?>
                 </ul>
+            <?php endif; ?>
+        </div>
+
+        <!-- ==================== Огляд посилки ==================== -->
+        <div class="card">
+            <div class="card__title">Огляд посилки</div>
+            <?php if (!empty($rma['inspection_issue'])): ?>
+                <div class="alert alert--warn" style="margin-top:0">
+                    🛠 Позначено проблему: <strong><?= e((string)$rma['inspection_note']) ?></strong>
+                </div>
+                <form method="post" action="<?= e(url('/admin/rma/' . $id . '/issue-clear')) ?>">
+                    <?= $token ?>
+                    <button class="btn btn--sm btn--ghost" type="submit">Зняти позначку проблеми</button>
+                </form>
+            <?php else: ?>
+                <p class="small muted">
+                    Якщо з посилкою щось не так (пошкоджене пакування, неповна комплектація, сліди
+                    використання тощо) — опишіть і позначте проблему. Адмін отримає сповіщення в Telegram,
+                    а заявка підсвітиться в списку. Клієнт цього не бачить.
+                </p>
+                <form method="post" action="<?= e(url('/admin/rma/' . $id . '/issue')) ?>">
+                    <?= $token ?>
+                    <div class="field">
+                        <textarea class="textarea" name="issue_note" rows="3"
+                                  placeholder="Напр.: розірвана коробка, відсутня пломба, немає кріплення з комплекту. Рішення: часткове повернення / відмова."></textarea>
+                    </div>
+                    <button class="btn btn--sm" type="submit">Позначити проблему і сповістити</button>
+                </form>
             <?php endif; ?>
         </div>
 

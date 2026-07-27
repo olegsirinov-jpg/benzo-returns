@@ -157,6 +157,9 @@ foreach ($advKeys as $k) {
                     <?php if (!empty($r['needs_manual_check'])): ?>
                         <div><span class="badge badge--amber" title="Замовлення не знайдено в SalesDrive">ручна перевірка</span></div>
                     <?php endif; ?>
+                    <?php if (!empty($r['inspection_issue'])): ?>
+                        <div><span class="badge badge--red" title="<?= e((string)$r['inspection_note']) ?>">🛠 проблема огляду</span></div>
+                    <?php endif; ?>
                 </td>
                 <td class="nowrap small"><?= dt((string)$r['created_at'], 'd.m.Y H:i') ?></td>
                 <td class="nowrap">№<?= e($r['order_number']) ?></td>

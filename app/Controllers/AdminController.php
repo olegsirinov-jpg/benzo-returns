@@ -1423,6 +1423,60 @@ class AdminController
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
+    /** Позначити проблему при огляді посилки + сповістити в Telegram. */
+    public function flagIssue(string $id): void
+    {
+        Csrf::verify();
+        $rmaId = (int)$id;
+        $rma   = Rma::find($rmaId);
+        if ($rma === null) {
+            Response::redirect('/admin');
+            return;
+        }
+        $note = Validate::text((string)($_POST['issue_note'] ?? ''), 500);
+        if ($note === '') {
+            Session::flash('error', 'Опишіть проблему перед позначенням.');
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
+
+        Db::update('rma', [
+            'inspection_issue' => 1,
+            'inspection_note'  => $note,
+            'updated_at'       => date('Y-m-d H:i:s'),
+        ], 'id = ?', [$rmaId]);
+
+        Rma::comment($rmaId, '🛠 Проблема при огляді: ' . $note, 'internal', Auth::name());
+        Rma::log($rmaId, 'Проблема при огляді', null, $note);
+
+        try {
+            $fresh = Rma::find($rmaId);
+            if ($fresh !== null) { \App\Telegram::issue($fresh, $note); }
+        } catch (\Throwable $e) {
+            error_log('Telegram: ' . $e->getMessage());
+        }
+
+        Session::flash('success', 'Проблему позначено, сповіщення надіслано.');
+        Response::redirect('/admin/rma/' . $rmaId);
+    }
+
+    /** Зняти позначку проблеми при огляді. */
+    public function clearIssue(string $id): void
+    {
+        Csrf::verify();
+        $rmaId = (int)$id;
+        if (Rma::find($rmaId) === null) {
+            Response::redirect('/admin');
+            return;
+        }
+        Db::update('rma', [
+            'inspection_issue' => 0,
+            'updated_at'       => date('Y-m-d H:i:s'),
+        ], 'id = ?', [$rmaId]);
+        Rma::log($rmaId, 'Проблему при огляді знято', null, null);
+        Session::flash('success', 'Позначку проблеми знято.');
+        Response::redirect('/admin/rma/' . $rmaId);
+    }
+
     /** Видалити створену накладну. */
     public function npCancel(string $id): void
     {

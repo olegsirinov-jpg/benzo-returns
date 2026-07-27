@@ -99,6 +99,28 @@ class Telegram
     }
 
     /**
+     * Проблема при огляді посилки — менеджер позначає вручну.
+     * @param array<string,mixed> $rma
+     */
+    public static function issue(array $rma, string $note): bool
+    {
+        if (!self::event('issue')) { return false; }
+        $lines = [
+            '🛠 <b>Проблема при огляді посилки</b>',
+            '',
+            'Заявка: <b>' . e((string)$rma['rma_number']) . '</b>',
+            'Статус: ' . e(Dict::status((string)$rma['status'])),
+            'Клієнт: ' . e($rma['customer_name'] ?: '—'),
+            '',
+            e($note),
+            '',
+            'Відкрити заявку:',
+            Rma::adminUrl((int)$rma['id']),
+        ];
+        return self::send(implode("\n", $lines));
+    }
+
+    /**
      * Реквізити для повернення коштів — надсилаються менеджером вручну,
      * зручний формат для копіювання в застосунок НоваПей.
      *

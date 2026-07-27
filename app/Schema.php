@@ -12,7 +12,7 @@ namespace App;
  */
 class Schema
 {
-    const TARGET_VERSION = 6;
+    const TARGET_VERSION = 7;
 
     public static function ensure(): void
     {
@@ -40,6 +40,9 @@ class Schema
         }
         if ($current < 6) {
             self::migrateV6();
+        }
+        if ($current < 7) {
+            self::migrateV7();
         }
 
         Db::run(
@@ -134,6 +137,23 @@ class Schema
         $add = [
             'np_cost_alert' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER `np_tracked_at`",
             'np_cost_note'  => "VARCHAR(200) NULL AFTER `np_cost_alert`",
+        ];
+        foreach ($add as $col => $def) {
+            if (!self::columnExists($db, 'rma', $col)) {
+                Db::run('ALTER TABLE `rma` ADD COLUMN `' . $col . '` ' . $def);
+            }
+        }
+    }
+
+    /**
+     * v7: позначка проблеми при огляді посилки (для сповіщення суперадміну).
+     */
+    private static function migrateV7(): void
+    {
+        $db = Env::str('DB_NAME');
+        $add = [
+            'inspection_issue' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER `received_at`",
+            'inspection_note'  => "VARCHAR(500) NULL AFTER `inspection_issue`",
         ];
         foreach ($add as $col => $def) {
             if (!self::columnExists($db, 'rma', $col)) {

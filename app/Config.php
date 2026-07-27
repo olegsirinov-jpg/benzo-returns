@@ -70,6 +70,7 @@ class Config
             'tg_ev_ttn'         => ['env' => '', 'type' => 'bool', 'secret' => false],
             'tg_ev_cost'        => ['env' => '', 'type' => 'bool', 'secret' => false],
             'tg_ev_stale'       => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'tg_ev_issue'       => ['env' => '', 'type' => 'bool', 'secret' => false],
         ];
     }
 

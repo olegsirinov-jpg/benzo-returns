@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS `rma` (
   `carrier` VARCHAR(40) NULL,
   `shipped_at` DATE NULL,
   `received_at` DATE NULL,
+  `inspection_issue` TINYINT(1) NOT NULL DEFAULT 0,
+  `inspection_note` VARCHAR(500) NULL,
   `shipping_payer` VARCHAR(20) NULL,
   `shipping_comment` TEXT NULL,
 

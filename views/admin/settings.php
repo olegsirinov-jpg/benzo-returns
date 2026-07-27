@@ -287,6 +287,10 @@ $adminEmail = (string)(App\Auth::user()['email'] ?? '');
                     <input type="checkbox" name="tg_ev_stale" value="1" <?= Config::bool('tg_ev_stale', true) ? 'checked' : '' ?>>
                     <span>⏰ Заявка довго очікує обробки</span>
                 </label>
+                <label class="check mb0">
+                    <input type="checkbox" name="tg_ev_issue" value="1" <?= Config::bool('tg_ev_issue', true) ? 'checked' : '' ?>>
+                    <span>🛠 Проблема при огляді посилки</span>
+                </label>
             </div>
         </div>
     </div>
