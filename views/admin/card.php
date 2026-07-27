@@ -761,11 +761,16 @@ $canReject = App\Workflow::canReject($status);
                     використання тощо) — опишіть і позначте проблему. Адмін отримає сповіщення в Telegram,
                     а заявка підсвітиться в списку. Клієнт цього не бачить.
                 </p>
-                <form method="post" action="<?= e(url('/admin/rma/' . $id . '/issue')) ?>">
+                <form method="post" action="<?= e(url('/admin/rma/' . $id . '/issue')) ?>" enctype="multipart/form-data">
                     <?= $token ?>
                     <div class="field">
                         <textarea class="textarea" name="issue_note" rows="3"
                                   placeholder="Напр.: розірвана коробка, відсутня пломба, немає кріплення з комплекту. Рішення: часткове повернення / відмова."></textarea>
+                    </div>
+                    <div class="field">
+                        <label class="label">Фото проблеми <span class="muted">(необовʼязково)</span></label>
+                        <input class="input" type="file" name="photos[]" accept="image/*" multiple style="max-width:280px;padding:6px">
+                        <div class="hint">Покажіть, що саме не так. Фото зберігаються в картці й видимі лише персоналу.</div>
                     </div>
                     <button class="btn btn--sm" type="submit">Позначити проблему і сповістити</button>
                 </form>

@@ -218,11 +218,12 @@ class Dict
     public static function photoTypes(): array
     {
         return [
-            'general'   => 'Загальне фото товару',
-            'packaging' => 'Фото упаковки',
-            'marking'   => 'Фото артикула / маркування',
-            'defect'    => 'Фото дефекту',
-            'other'     => 'Інше',
+            'general'    => 'Загальне фото товару',
+            'packaging'  => 'Фото упаковки',
+            'marking'    => 'Фото артикула / маркування',
+            'defect'     => 'Фото дефекту',
+            'inspection' => 'Фото проблеми при огляді',
+            'other'      => 'Інше',
         ];
     }
 

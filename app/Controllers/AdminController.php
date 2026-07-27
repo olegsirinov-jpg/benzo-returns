@@ -1448,6 +1448,30 @@ class AdminController
         Rma::comment($rmaId, '🛠 Проблема при огляді: ' . $note, 'internal', Auth::name());
         Rma::log($rmaId, 'Проблема при огляді', null, $note);
 
+        // Прикріплені фото проблеми (необовʼязково)
+        $photoCount = 0;
+        $files = Upload::normalize($_FILES['photos'] ?? []);
+        foreach ($files as $file) {
+            try {
+                $stored = Upload::saveImage($file);
+                Db::insert('rma_photos', [
+                    'rma_id'      => $rmaId,
+                    'type'        => 'inspection',
+                    'file'        => $stored,
+                    'orig_name'   => mb_substr($file['name'], 0, 255),
+                    'size'        => $file['size'],
+                    'uploaded_by' => 'manager',
+                    'created_at'  => date('Y-m-d H:i:s'),
+                ]);
+                $photoCount++;
+            } catch (\Throwable $e) {
+                error_log('Фото проблеми: ' . $e->getMessage());
+            }
+        }
+        if ($photoCount > 0) {
+            Rma::log($rmaId, 'Фото проблеми огляду', null, 'Додано ' . $photoCount . ' шт.');
+        }
+
         try {
             $fresh = Rma::find($rmaId);
             if ($fresh !== null) { \App\Telegram::issue($fresh, $note); }
@@ -1455,7 +1479,8 @@ class AdminController
             error_log('Telegram: ' . $e->getMessage());
         }
 
-        Session::flash('success', 'Проблему позначено, сповіщення надіслано.');
+        Session::flash('success', 'Проблему позначено, сповіщення надіслано.'
+            . ($photoCount > 0 ? ' Фото додано: ' . $photoCount . '.' : ''));
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
