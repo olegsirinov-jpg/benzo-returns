@@ -99,6 +99,26 @@ class Telegram
     }
 
     /**
+     * Зведення для адміна: кому надіслано нагадування про ТТН.
+     *
+     * @param array<int,array{rma_number:string,customer:string,phone:string}> $rows
+     */
+    public static function ttnReminderSummary(array $rows): bool
+    {
+        if (!self::event('reminder') || $rows === []) {
+            return false;
+        }
+        $lines = ['🔔 <b>Нагадування клієнтам про ТТН</b> — ' . count($rows) . ' шт.', ''];
+        foreach ($rows as $i => $r) {
+            $lines[] = ($i + 1) . '. ' . e($r['rma_number']) . ' — ' . e($r['customer'] ?: '—')
+                     . ' (' . e($r['phone']) . ')';
+        }
+        $lines[] = '';
+        $lines[] = 'Це погоджені повернення без ТТН понад 2 дні. Клієнтам надіслано нагадування.';
+        return self::send(implode("\n", $lines));
+    }
+
+    /**
      * Список зворотних посилок, що прибули у відділення й чекають на отримання.
      *
      * @param array<int,array{rma_number:string,ttn:string,customer:string}> $rows

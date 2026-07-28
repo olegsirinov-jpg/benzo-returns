@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS `rma` (
   `notified_stale_at` DATETIME NULL,
   `created_at` DATETIME NOT NULL,
   `updated_at` DATETIME NOT NULL,
+  `approved_at` DATETIME NULL,
+  `ttn_reminded_at` DATETIME NULL,
 
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_rma_number` (`rma_number`),

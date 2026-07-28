@@ -190,6 +190,14 @@ class Rma
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = ?', [$rmaId]);
 
+        // Час першого погодження — для автонагадувань про ТТН.
+        if (in_array($newStatus, ['approved', 'waiting_customer_shipment'], true)) {
+            Db::run(
+                'UPDATE rma SET approved_at = ? WHERE id = ? AND approved_at IS NULL',
+                [date('Y-m-d H:i:s'), $rmaId]
+            );
+        }
+
         self::log($rmaId, 'status', Dict::status($old), Dict::status($newStatus), $comment);
 
         if ($comment !== null && $comment !== '') {

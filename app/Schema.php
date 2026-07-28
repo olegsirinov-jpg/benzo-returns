@@ -12,7 +12,7 @@ namespace App;
  */
 class Schema
 {
-    const TARGET_VERSION = 7;
+    const TARGET_VERSION = 8;
 
     public static function ensure(): void
     {
@@ -43,6 +43,9 @@ class Schema
         }
         if ($current < 7) {
             self::migrateV7();
+        }
+        if ($current < 8) {
+            self::migrateV8();
         }
 
         Db::run(
@@ -160,6 +163,31 @@ class Schema
                 Db::run('ALTER TABLE `rma` ADD COLUMN `' . $col . '` ' . $def);
             }
         }
+    }
+
+    /**
+     * v8: час погодження + час нагадування про ТТН (для автонагадувань).
+     */
+    private static function migrateV8(): void
+    {
+        $db = Env::str('DB_NAME');
+        $add = [
+            'approved_at'     => "DATETIME NULL AFTER `updated_at`",
+            'ttn_reminded_at' => "DATETIME NULL AFTER `approved_at`",
+        ];
+        foreach ($add as $col => $def) {
+            if (!self::columnExists($db, 'rma', $col)) {
+                Db::run('ALTER TABLE `rma` ADD COLUMN `' . $col . '` ' . $def);
+            }
+        }
+        // Заповнюємо approved_at з історії для наявних заявок.
+        Db::run(
+            "UPDATE rma r SET approved_at = (
+                SELECT MIN(h.created_at) FROM rma_history h
+                WHERE h.rma_id = r.id AND h.field = 'status' AND h.new_value = ?
+             ) WHERE approved_at IS NULL",
+            [Dict::status('approved')]
+        );
     }
 
     private static function columnExists(string $db, string $table, string $column): bool

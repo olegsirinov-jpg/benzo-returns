@@ -71,6 +71,7 @@ class Config
             'tg_ev_cost'        => ['env' => '', 'type' => 'bool', 'secret' => false],
             'tg_ev_stale'       => ['env' => '', 'type' => 'bool', 'secret' => false],
             'tg_ev_issue'       => ['env' => '', 'type' => 'bool', 'secret' => false],
+            'tg_ev_reminder'    => ['env' => '', 'type' => 'bool', 'secret' => false],
 
             // Які блоки картки показувати простим менеджерам (адмін бачить усе).
             // За замовчуванням усе видно.
