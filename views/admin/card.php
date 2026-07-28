@@ -512,8 +512,38 @@ $canReject = App\Workflow::canReject($status);
                     Якщо потрібно все одно оформити накладну магазину — спершу приберіть ТТН у блоці «Доставка».
                 </p>
             <?php else: ?>
+                <div class="subblock" style="border-left-color:var(--green)">
+                    <div class="subblock__title">«Легке повернення» Нової пошти</div>
+                    <?php if (!empty($rma['np_original_ttn'])): ?>
+                        <p class="small muted" style="margin-top:0">
+                            Якщо клієнт оформив «Легке повернення» у застосунку НП, ми підхопимо його
+                            <strong>автоматично</strong> по ТТН отримання замовлення
+                            <span class="mono"><?= e((string)$rma['np_original_ttn']) ?></span> (перевірка ~щопівгодини).
+                            Клієнт каже, що вже відправив? Перевірте зараз:
+                        </p>
+                        <form method="post" action="<?= e(url('/admin/rma/' . $id . '/light-check')) ?>" style="display:inline">
+                            <?= $token ?>
+                            <button class="btn btn--sm" type="submit">Перевірити «Легке повернення» зараз</button>
+                        </form>
+                    <?php else: ?>
+                        <p class="small muted" style="margin-top:0">
+                            Щоб автоматично підхопити «Легке повернення», вкажіть ТТН, по якій клієнт
+                            <strong>отримував</strong> замовлення (є в SMS від НП або в застосунку Nova Post).
+                            Або просто введіть номер повернення вручну у блоці «Доставка».
+                        </p>
+                        <form method="post" action="<?= e(url('/admin/rma/' . $id . '/light-check')) ?>">
+                            <?= $token ?>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                                <input class="input mono" type="text" name="original_ttn"
+                                       placeholder="ТТН отримання замовлення" style="max-width:240px">
+                                <button class="btn btn--sm" type="submit">Зберегти й перевірити</button>
+                            </div>
+                        </form>
+                    <?php endif; ?>
+                </div>
+
                 <p class="small muted">
-                    Створіть зворотну накладну — клієнт віднесе товар на відділення НП за готовим номером.
+                    Або створіть зворотну накладну — клієнт віднесе товар на відділення НП за готовим номером.
                     Платник: <strong><?= e(App\Dict::shippingPayers()[(string)$rma['shipping_payer']] ?? '—') ?></strong>
                     (за причиною повернення).
                 </p>

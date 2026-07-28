@@ -1429,6 +1429,48 @@ class AdminController
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
+    /**
+     * Перевірити «Легке повернення» вручну (не чекаючи крон).
+     * За потреби менеджер вказує ТТН, по якій клієнт отримував замовлення.
+     */
+    public function lightCheck(string $id): void
+    {
+        Csrf::verify();
+        $rmaId = (int)$id;
+        $rma   = Rma::find($rmaId);
+        if ($rma === null) {
+            Response::redirect('/admin');
+            return;
+        }
+
+        // менеджер міг вписати оригінальну ТТН отримання
+        $orig = trim((string)($_POST['original_ttn'] ?? ''));
+        if ($orig !== '') {
+            $valid = Validate::ttn($orig);
+            if ($valid === null) {
+                Session::flash('error', 'Некоректний номер ТТН отримання.');
+                Response::redirect('/admin/rma/' . $rmaId);
+            }
+            Db::update('rma', ['np_original_ttn' => $valid, 'updated_at' => date('Y-m-d H:i:s')], 'id = ?', [$rmaId]);
+            $rma['np_original_ttn'] = $valid;
+        }
+
+        if (empty($rma['np_original_ttn'])) {
+            Session::flash('error', 'Немає ТТН отримання замовлення. Вкажіть її або введіть номер повернення вручну у блоці «Доставка».');
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
+
+        $res = Rma::checkLightReturn($rmaId);
+        if (!empty($res['detected'])) {
+            Session::flash('success', 'Знайдено «Легке повернення». ТТН повернення: ' . $res['ttn'] . '.');
+        } elseif (!empty($res['ok'])) {
+            Session::flash('success', 'По цій ТТН «Легке повернення» ще не оформлено. Клієнт міг щойно його створити — спробуйте трохи пізніше або введіть номер вручну.');
+        } else {
+            Session::flash('error', 'Не вдалося перевірити. Перевірте налаштування Нової пошти.');
+        }
+        Response::redirect('/admin/rma/' . $rmaId);
+    }
+
     /** Надіслати менеджеру в Telegram список посилок до отримання. */
     public function sendPickupList(): void
     {
