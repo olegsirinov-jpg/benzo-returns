@@ -18,7 +18,9 @@ use App\Dict;
 use App\Env;
 use App\Telegram;
 
-$isCli = PHP_SAPI === 'cli';
+// Запуск із cron може йти через CGI-бінарник PHP (не CLI): орієнтуємось на
+// відсутність HTTP-запиту (немає REQUEST_METHOD), а не лише на PHP_SAPI.
+$isCli = PHP_SAPI === 'cli' || !isset($_SERVER['REQUEST_METHOD']);
 
 if (!$isCli) {
     $key = (string)($_GET['key'] ?? '');

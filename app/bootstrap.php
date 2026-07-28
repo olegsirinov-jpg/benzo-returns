@@ -36,6 +36,8 @@ foreach ([BASE_PATH . '/storage/logs', BASE_PATH . '/uploads'] as $dir) {
     }
 }
 
-if (PHP_SAPI !== 'cli') {
+// Сесія — лише для реальних HTTP-запитів. Cron через CGI-бінарник PHP теж
+// має PHP_SAPI !== 'cli', але не має REQUEST_METHOD — там сесія не потрібна.
+if (PHP_SAPI !== 'cli' && isset($_SERVER['REQUEST_METHOD'])) {
     App\Session::start();
 }

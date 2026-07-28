@@ -18,7 +18,9 @@ use App\Env;
 use App\NovaPoshta;
 use App\Rma;
 
-$isCli = PHP_SAPI === 'cli';
+// Запуск із cron може йти через CGI-бінарник PHP (не CLI). Тоді PHP_SAPI !== 'cli',
+// але реального HTTP-запиту немає — ознака цього: відсутній REQUEST_METHOD.
+$isCli = PHP_SAPI === 'cli' || !isset($_SERVER['REQUEST_METHOD']);
 if (!$isCli) {
     $key = (string)($_GET['key'] ?? '');
     if ($key === '' || !hash_equals(Env::str('CRON_KEY'), $key)) {
