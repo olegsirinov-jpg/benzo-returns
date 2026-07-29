@@ -89,6 +89,10 @@ class AdminController
         } elseif ($status !== '' && isset(Dict::statuses()[$status])) {
             $where[]  = 'r.status = ?';
             $params[] = $status;
+        } elseif ($search === '') {
+            // За замовчуванням ховаємо завершені (закриті/скасовані) заявки.
+            // Показуються, якщо явно обрати статус або шукати конкретну заявку.
+            $where[] = "r.status NOT IN ('closed','cancelled')";
         }
 
         $reason = (string)($q['reason'] ?? '');

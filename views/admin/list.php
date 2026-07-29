@@ -66,7 +66,7 @@ foreach ($advKeys as $k) {
                 <div>
                     <label class="label" for="status">Статус</label>
                     <select class="select" id="status" name="status">
-                        <option value="">Усі</option>
+                        <option value="">Усі, крім закритих</option>
                         <option value="open" <?= $f('status') === 'open' ? 'selected' : '' ?>>— Тільки в роботі —</option>
                         <?php foreach (App\Dict::statuses() as $code => $label): ?>
                             <option value="<?= e($code) ?>" <?= $f('status') === $code ? 'selected' : '' ?>>
