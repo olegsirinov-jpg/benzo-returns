@@ -124,6 +124,17 @@ class Notify
             ];
         }
 
+        // Доставку повернення мав оплатити клієнт, але на ТТН оплата на магазині.
+        if (!empty($rma['np_cost_alert'])) {
+            $out['unpaid_shipping'] = [
+                'label' => 'Клієнт не оплатив доставку',
+                'text'  => 'Повернення ' . (string)$rma['rma_number'] . ': вартість зворотної доставки оплачує '
+                         . 'відправник, але посилку оформлено з оплатою отримувачем. Будь ласка, оплатіть '
+                         . 'доставку за вашим відправленням у застосунку Nova Post або на відділенні Нової пошти. '
+                         . 'Інакше її вартість буде утримано із суми повернення. ' . Rma::publicUrl($rma),
+            ];
+        }
+
         foreach (['need_more_info', 'approved', 'received', 'refunded', 'rejected', 'created'] as $event) {
             $tpl = self::template($rma, $event);
             $out[$event] = ['label' => $tpl['subject'], 'text' => $tpl['sms']];
