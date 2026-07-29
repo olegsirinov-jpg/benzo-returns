@@ -328,6 +328,7 @@ class Rma
         if ((string)($rma['shipping_payer'] ?? '') !== 'customer') {
             return [false, ''];
         }
+        $src      = (string)($rma['ttn_source'] ?? '');
         $payer    = (string)($info['payer_type'] ?? '');
         $cod      = (float)($info['cod_sum'] ?? 0);
         $backward = (float)($info['backward_sum'] ?? 0);
@@ -335,7 +336,9 @@ class Rma
         $parts = [];
         // У поверненні клієнт — відправник, магазин — отримувач.
         // Якщо платник доставки не відправник — платимо ми.
-        if ($payer !== '' && $payer !== 'Sender') {
+        // Виняток — «Легке повернення»: доставку покриває Нова пошта,
+        // тож платник доставки магазину не стосується (це не наша витрата).
+        if ($src !== 'light_return' && $payer !== '' && $payer !== 'Sender') {
             $parts[] = 'доставку оплачує отримувач (магазин)';
         }
         if ($cod > 0) {
