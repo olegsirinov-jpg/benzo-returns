@@ -85,7 +85,7 @@ class Telegram
     {
         if (!self::event('cost')) { return false; }
         $lines = [
-            '⚠️ <b>Оплата на зворотній ТТН — платити мав клієнт</b>',
+            '⚠️ <b>Оплата на зворотній ТТН</b>',
             '',
             'Заявка: <b>' . e($rma['rma_number']) . '</b>',
             'ТТН: <code>' . e((string)$rma['return_ttn']) . '</code>',

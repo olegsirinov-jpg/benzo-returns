@@ -55,10 +55,10 @@ $showBlk = function (string $key): bool {
 
 <?php if (!empty($rma['np_cost_alert'])): ?>
     <div class="alert alert--error" style="margin-top:16px">
-        💸 <strong>Оплата на зворотній ТТН, хоча доставку мав оплатити клієнт.</strong>
+        💸 <strong>На зворотній ТТН є оплата.</strong>
         <?= e((string)$rma['np_cost_note']) ?>
         Перевірте перед отриманням посилки — можливо, доведеться відмовитись від отримання
-        або узгодити оплату з клієнтом.
+        або узгодити з клієнтом. Наложку/переказ за товар магазин оплачувати не повинен.
     </div>
 <?php endif; ?>
 

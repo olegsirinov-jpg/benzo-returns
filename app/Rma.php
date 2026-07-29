@@ -297,7 +297,7 @@ class Rma
 
         // Сповіщаємо менеджера один раз — коли маячок щойно з'явився.
         if ($alert && !$wasAlert) {
-            self::comment($rmaId, '⚠️ Оплата на зворотній ТТН, хоча платити мав клієнт. ' . $note, 'system', 'Система');
+            self::comment($rmaId, '⚠️ Оплата на зворотній ТТН — перевірте перед отриманням. ' . $note, 'system', 'Система');
             self::log($rmaId, 'Оплата на ТТН (маячок)', null, $note, 'Виявлено під час трекінгу НП', null, 'Система');
             try {
                 $fresh = self::find($rmaId);
@@ -325,28 +325,34 @@ class Rma
      */
     private static function npCostAlert(array $rma, array $info): array
     {
-        if ((string)($rma['shipping_payer'] ?? '') !== 'customer') {
-            return [false, ''];
-        }
-        $src      = (string)($rma['ttn_source'] ?? '');
-        $payer    = (string)($info['payer_type'] ?? '');
-        $cod      = (float)($info['cod_sum'] ?? 0);
-        $backward = (float)($info['backward_sum'] ?? 0);
+        $src       = (string)($rma['ttn_source'] ?? '');
+        $payer     = (string)($info['payer_type'] ?? '');
+        $cod       = (float)($info['cod_sum'] ?? 0);
+        $backward  = (float)($info['backward_sum'] ?? 0);
+        $payerCust = (string)($rma['shipping_payer'] ?? '') === 'customer';
+
+        $fmt = static function (float $n): string {
+            return rtrim(rtrim(number_format($n, 2, '.', ' '), '0'), '.');
+        };
 
         $parts = [];
-        // У поверненні клієнт — відправник, магазин — отримувач.
-        // Якщо платник доставки не відправник — платимо ми.
-        // Виняток — «Легке повернення»: доставку покриває Нова пошта,
-        // тож платник доставки магазину не стосується (це не наша витрата).
-        if ($src !== 'light_return' && $payer !== '' && $payer !== 'Sender') {
-            $parts[] = 'доставку оплачує отримувач (магазин)';
-        }
+
+        // Гроші за товар (наложка / грошовий переказ) — магазин НІКОЛИ не має їх
+        // платити за повернення. Тому це прапорець завжди, незалежно від того,
+        // хто мав платити доставку і яким способом клієнт відправив.
         if ($cod > 0) {
-            $parts[] = 'накладений платіж ' . rtrim(rtrim(number_format($cod, 2, '.', ' '), '0'), '.') . ' грн';
+            $parts[] = 'накладений платіж ' . $fmt($cod) . ' грн';
         }
         if ($backward > 0) {
-            $parts[] = 'зворотний переказ коштів ' . rtrim(rtrim(number_format($backward, 2, '.', ' '), '0'), '.') . ' грн';
+            $parts[] = 'грошовий переказ ' . $fmt($backward) . ' грн';
         }
+
+        // Доставку мав оплатити клієнт, але за ТТН платник — отримувач (магазин).
+        // Виняток — «Легке повернення»: доставку покриває Нова пошта (не наша витрата).
+        if ($payerCust && $src !== 'light_return' && $payer !== '' && $payer !== 'Sender') {
+            $parts[] = 'доставку оплачує отримувач (магазин)';
+        }
+
         if ($parts === []) {
             return [false, ''];
         }
