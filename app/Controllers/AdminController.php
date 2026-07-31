@@ -649,6 +649,7 @@ class AdminController
                     'AmountPaid'                  => 'Сплачено (AmountPaid)',
                     'AfterpaymentOnGoodsCost'     => 'Наложка (за товар)',
                     'BackwardDeliverySum'         => 'Грошовий переказ',
+                    'RedeliverySum'               => 'Зворотна доставка коштів',
                     'PossibilityLightReturn'      => 'Можливе Легке повернення',
                     'LightReturnNumber'           => 'ТТН Легкого повернення',
                 ];

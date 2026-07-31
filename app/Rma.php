@@ -325,11 +325,15 @@ class Rma
      */
     private static function npCostAlert(array $rma, array $info): array
     {
-        $src       = (string)($rma['ttn_source'] ?? '');
-        $payer     = (string)($info['payer_type'] ?? '');
-        $cod       = (float)($info['cod_sum'] ?? 0);
-        $backward  = (float)($info['backward_sum'] ?? 0);
-        $payerCust = (string)($rma['shipping_payer'] ?? '') === 'customer';
+        $src        = (string)($rma['ttn_source'] ?? '');
+        $payer      = (string)($info['payer_type'] ?? '');
+        $cod        = (float)($info['cod_sum'] ?? 0);
+        $backward   = (float)($info['backward_sum'] ?? 0);
+        $redelivery = (float)($info['redelivery_sum'] ?? 0);
+        $docCost    = (float)($info['document_cost'] ?? 0);
+        $paid       = (float)($info['amount_paid'] ?? 0);
+        $toPayRaw   = $info['amount_to_pay'] ?? '';
+        $payerCust  = (string)($rma['shipping_payer'] ?? '') === 'customer';
 
         $fmt = static function (float $n): string {
             return rtrim(rtrim(number_format($n, 2, '.', ' '), '0'), '.');
@@ -338,19 +342,26 @@ class Rma
         $parts = [];
 
         // Гроші за товар (наложка / грошовий переказ) — магазин НІКОЛИ не має їх
-        // платити за повернення. Тому це прапорець завжди, незалежно від того,
-        // хто мав платити доставку і яким способом клієнт відправив.
+        // платити за повернення. Прапорець завжди, незалежно від решти умов.
         if ($cod > 0) {
             $parts[] = 'накладений платіж ' . $fmt($cod) . ' грн';
         }
         if ($backward > 0) {
             $parts[] = 'грошовий переказ ' . $fmt($backward) . ' грн';
         }
+        if ($redelivery > 0) {
+            $parts[] = 'зворотна доставка коштів ' . $fmt($redelivery) . ' грн';
+        }
 
-        // Доставку мав оплатити клієнт, але за ТТН платник — отримувач (магазин).
-        // Виняток — «Легке повернення»: доставку покриває Нова пошта (не наша витрата).
+        // Доставка: тривога лише якщо платити мав клієнт, платник за ТТН — отримувач,
+        // і доставку ще НЕ оплачено (лишилась сума до сплати). Якщо НП дає AmountToPay
+        // числом — беремо його; інакше рахуємо DocumentCost - AmountPaid. Щойно клієнт
+        // оплатить — сума стане 0 і маячок зникне сам. Легке повернення — виняток (НП покриває).
         if ($payerCust && $src !== 'light_return' && $payer !== '' && $payer !== 'Sender') {
-            $parts[] = 'доставку оплачує отримувач (магазин)';
+            $due = is_numeric($toPayRaw) ? (float)$toPayRaw : max(0.0, $docCost - $paid);
+            if ($due > 0.009) {
+                $parts[] = 'доставку оплачує отримувач (магазин), до сплати ' . $fmt($due) . ' грн';
+            }
         }
 
         if ($parts === []) {

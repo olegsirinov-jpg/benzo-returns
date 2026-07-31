@@ -521,10 +521,14 @@ class NovaPoshta
                 'light_ttn'      => (string)($row['LightReturnNumber'] ?? ''),
                 'light_reason'   => (string)($row['UndeliveryReasonsSubtypeDescription'] ?? ''),
                 // хто оплачує доставку та чи є грошові навантаження на ТТН
-                'payer_type'    => (string)($row['PayerType'] ?? ''),
-                'cod_sum'       => (float)($row['AfterpaymentOnGoodsCost'] ?? 0),
-                'backward_sum'  => (float)($row['BackwardDeliverySum'] ?? 0),
-                'document_cost' => (float)($row['DocumentCost'] ?? 0),
+                'payer_type'     => (string)($row['PayerType'] ?? ''),
+                'cod_sum'        => (float)($row['AfterpaymentOnGoodsCost'] ?? 0),
+                'backward_sum'   => (float)($row['BackwardDeliverySum'] ?? 0),
+                'redelivery_sum' => (float)($row['RedeliverySum'] ?? 0),
+                'document_cost'  => (float)($row['DocumentCost'] ?? 0),
+                'amount_paid'    => (float)($row['AmountPaid'] ?? 0),
+                // «сума до сплати» — НП інколи дає порожнім; тоді рахуємо DocumentCost - AmountPaid
+                'amount_to_pay'  => (string)($row['AmountToPay'] ?? ''),
             ];
         }
         return $out;
