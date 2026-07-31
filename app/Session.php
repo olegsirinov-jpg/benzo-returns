@@ -5,6 +5,9 @@ namespace App;
 
 class Session
 {
+    /** Тривалість сесії — 24 години. */
+    const LIFETIME = 86400;
+
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -13,8 +16,24 @@ class Session
         $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
+        // Власний каталог сесій: на спільному хостингу GC інших сайтів не
+        // видалятиме наші файли раніше часу. Каталог закритий у .htaccess.
+        if (defined('BASE_PATH')) {
+            $dir = BASE_PATH . '/storage/sessions';
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0775, true);
+            }
+            if (is_dir($dir) && is_writable($dir)) {
+                session_save_path($dir);
+                ini_set('session.gc_probability', '1');
+                ini_set('session.gc_divisor', '100');
+            }
+        }
+        // Скільки сервер тримає дані сесії без активності.
+        ini_set('session.gc_maxlifetime', (string)self::LIFETIME);
+
         session_set_cookie_params([
-            'lifetime' => 0,
+            'lifetime' => self::LIFETIME,
             'path'     => '/',
             'secure'   => $secure,
             'httponly' => true,
@@ -22,6 +41,20 @@ class Session
         ]);
         session_name('rma_sess');
         session_start();
+
+        // Ковзне продовження: кожна активність відсуває термін ще на 24 години.
+        // Оновлюємо мітку часу (щоб серверний GC рахував від останньої дії —
+        // файл сесії перезаписується) і наново шлемо куку з новим терміном.
+        $_SESSION['_last'] = time();
+        if (session_id() !== '') {
+            setcookie(session_name(), session_id(), [
+                'expires'  => time() + self::LIFETIME,
+                'path'     => '/',
+                'secure'   => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]);
+        }
     }
 
     /**

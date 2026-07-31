@@ -21,6 +21,7 @@ deployment:
       --exclude='README.md'
       --exclude='uploads/'
       --exclude='storage/logs/'
+      --exclude='storage/sessions/'
       ./ "$DEPLOYPATH/"
 
     # Правильні права: каталоги 755, файли 644 (щоб Apache читав .htaccess та код).
@@ -28,8 +29,8 @@ deployment:
     - /bin/find "$DEPLOYPATH" -type f -not -name '.env' -exec /bin/chmod 644 {} +
 
     # Каталоги для даних + права на запис
-    - /bin/mkdir -p "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
-    - /bin/chmod -R 0775 "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs"
+    - /bin/mkdir -p "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs" "$DEPLOYPATH/storage/sessions"
+    - /bin/chmod -R 0775 "$DEPLOYPATH/uploads" "$DEPLOYPATH/storage/logs" "$DEPLOYPATH/storage/sessions"
 
     # .env лишаємо приватним (секрети не мають бути читабельні іншим)
     - "[ -f \"$DEPLOYPATH/.env\" ] && /bin/chmod 600 \"$DEPLOYPATH/.env\" || true"
