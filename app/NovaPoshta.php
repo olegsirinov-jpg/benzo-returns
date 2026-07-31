@@ -531,6 +531,29 @@ class NovaPoshta
     }
 
     /**
+     * Сирий рядок трекінгу getStatusDocuments — для діагностики грошових полів.
+     *
+     * @return array{ok:bool,row:array<string,mixed>,error:string}
+     */
+    public static function trackRaw(string $ttn, string $phone = ''): array
+    {
+        $key = self::anyKey();
+        $ttn = trim($ttn);
+        if ($key === '' || $ttn === '') {
+            return ['ok' => false, 'row' => [], 'error' => 'Немає ключа або ТТН'];
+        }
+        $r = self::request($key, 'TrackingDocument', 'getStatusDocuments', [
+            'Documents' => [['DocumentNumber' => $ttn, 'Phone' => $phone]],
+        ]);
+        $row = is_array($r['data'][0] ?? null) ? $r['data'][0] : [];
+        return [
+            'ok'    => (bool)($r['success'] && $row !== []),
+            'row'   => $row,
+            'error' => $row === [] ? (implode('; ', $r['errors']) ?: 'ТТН не знайдено') : '',
+        ];
+    }
+
+    /**
      * Інфо про легке повернення по оригінальній ТТН замовлення.
      *
      * @return array{possible:bool,ttn:string,reason:string,found:bool}

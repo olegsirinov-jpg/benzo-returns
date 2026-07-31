@@ -123,7 +123,58 @@
     <?php endif; ?>
 </div>
 
-<?php if ($result !== null && !isset($result['testcreate'])): ?>
+<div class="card">
+    <div class="card__title">4. Грошові поля ТТН (для маячка оплати)</div>
+    <p class="small muted">
+        Показує «сирі» поля оплати по ТТН — щоб звірити, як НП їх заповнює: сума до сплати,
+        статус оплати накладної, наложка, платник. Введіть номер <strong>зворотної</strong> ТТН
+        (за потреби — телефон отримувача).
+    </p>
+    <form method="post" action="<?= e(url('/admin/np-diag')) ?>">
+        <?= App\Csrf::field() ?>
+        <input type="hidden" name="mode" value="money">
+        <div class="grid2">
+            <div class="field">
+                <label class="label" for="money_ttn">Номер ТТН</label>
+                <input class="input mono" type="text" id="money_ttn" name="ttn"
+                       value="<?= isset($result['money']) ? e((string)$result['money']['ttn']) : '' ?>" placeholder="20450000000000">
+            </div>
+            <div class="field">
+                <label class="label" for="money_phone">Телефон отримувача <span class="muted">(необовʼязково)</span></label>
+                <input class="input" type="text" id="money_phone" name="phone" value="">
+            </div>
+        </div>
+        <button class="btn btn--ghost" type="submit" <?= $keyCount === 0 ? 'disabled' : '' ?>>Показати грошові поля</button>
+    </form>
+
+    <?php if ($result !== null && isset($result['money'])): ?>
+        <?php $m = $result['money']; ?>
+        <div class="mt16">
+            <?php if (empty($m['ok'])): ?>
+                <div class="alert alert--warn"><?= e($m['error'] ?: 'ТТН не знайдено') ?></div>
+            <?php else: ?>
+                <table class="kv">
+                    <?php foreach ($m['fields'] as $fld): ?>
+                        <tr>
+                            <td><?= e($fld['label']) ?> <span class="small muted mono"><?= e($fld['key']) ?></span></td>
+                            <td>
+                                <?php if (!$fld['present']): ?>
+                                    <span class="muted">— немає у відповіді —</span>
+                                <?php else: ?>
+                                    <strong><?= e(is_scalar($fld['value']) ? (string)$fld['value'] : json_encode($fld['value'], JSON_UNESCAPED_UNICODE)) ?></strong>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+                <h3>Повний рядок відповіді (надішліть мені)</h3>
+                <pre class="small mono" style="background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;max-height:420px"><?= e(json_encode($m['raw'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) ?></pre>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php if ($result !== null && isset($result['keys'])): ?>
 
     <?php if ($result['winner'] > 0): ?>
         <div class="alert alert--success">

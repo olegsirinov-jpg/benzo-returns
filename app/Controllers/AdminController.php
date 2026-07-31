@@ -631,6 +631,43 @@ class AdminController
                 }
             } elseif ($mode === 'testcreate') {
                 $result = ['testcreate' => $this->npTestCreate()];
+            } elseif ($mode === 'money') {
+                // Показ «сирих» грошових полів ТТН — щоб звірити, як НП їх заповнює.
+                $ttn   = trim((string)($_POST['ttn'] ?? ''));
+                $phone = trim((string)($_POST['phone'] ?? ''));
+                $raw   = \App\NovaPoshta::trackRaw($ttn, $phone);
+
+                $labels = [
+                    'StatusCode'                  => 'Код статусу',
+                    'Status'                      => 'Статус',
+                    'PayerType'                   => 'Платник доставки',
+                    'PaymentMethod'               => 'Спосіб оплати',
+                    'DocumentCost'                => 'Вартість доставки',
+                    'ExpressWaybillPaymentStatus' => 'Статус оплати накладної',
+                    'ExpressWaybillAmountToPay'   => 'Сума до сплати за накладну',
+                    'AmountToPay'                 => 'Сума до сплати (AmountToPay)',
+                    'AmountPaid'                  => 'Сплачено (AmountPaid)',
+                    'AfterpaymentOnGoodsCost'     => 'Наложка (за товар)',
+                    'BackwardDeliverySum'         => 'Грошовий переказ',
+                    'PossibilityLightReturn'      => 'Можливе Легке повернення',
+                    'LightReturnNumber'           => 'ТТН Легкого повернення',
+                ];
+                $fields = [];
+                foreach ($labels as $k => $label) {
+                    $fields[] = [
+                        'key'     => $k,
+                        'label'   => $label,
+                        'present' => array_key_exists($k, $raw['row']),
+                        'value'   => $raw['row'][$k] ?? null,
+                    ];
+                }
+                $result = ['money' => [
+                    'ok'     => $raw['ok'],
+                    'error'  => $raw['error'],
+                    'ttn'    => $ttn,
+                    'fields' => $fields,
+                    'raw'    => $raw['row'],
+                ]];
             } else {
                 $ttn = trim((string)($_POST['ttn'] ?? ''));
                 $result = ['ttn' => $ttn, 'keys' => [], 'winner' => 0];
