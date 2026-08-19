@@ -1513,6 +1513,75 @@ class AdminController
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
+    /**
+     * Знайти замовлення в SalesDrive за виправленим номером/телефоном і
+     * привʼязати його до заявки: підтягнути дату, ПІБ, email, ТТН отримання
+     * та записати коментар у SalesDrive (як при створенні).
+     */
+    public function relinkOrder(string $id): void
+    {
+        Csrf::verify();
+        $rmaId = (int)$id;
+        $rma   = Rma::find($rmaId);
+        if ($rma === null) {
+            Response::redirect('/admin');
+            return;
+        }
+
+        $orderNumber = Validate::orderNumber((string)($_POST['order_number'] ?? ''));
+        $phone       = Validate::phone((string)($_POST['phone'] ?? ''));
+        if ($orderNumber === null || $phone === null) {
+            Session::flash('error', 'Вкажіть коректний номер замовлення й телефон.');
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
+
+        $res = \App\SalesDrive::findOrder($orderNumber, $phone);
+        if (empty($res['found'])) {
+            Session::flash('error', 'Замовлення не знайдено в SalesDrive за цим номером і телефоном. Перевірте дані.');
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
+        $o = $res['order'];
+
+        $data = [
+            'order_number'       => $orderNumber,
+            'phone'              => $phone,
+            'order_id_sd'        => $o['sd_id'],
+            'order_date'         => $o['order_date'],
+            'order_found'        => 1,
+            'needs_manual_check' => 0,
+            'updated_at'         => date('Y-m-d H:i:s'),
+        ];
+        // ТТН отримання — щоб працювало виявлення «Легкого повернення»
+        if (!empty($o['delivery_ttn'])) {
+            $data['np_original_ttn'] = $o['delivery_ttn'];
+        }
+        // ПІБ/email добираємо лише якщо порожні (не затираємо введене менеджером)
+        if (empty($rma['customer_name']) && !empty($o['customer_name'])) {
+            $data['customer_name'] = $o['customer_name'];
+        }
+        if (empty($rma['email']) && !empty($o['email'])) {
+            $data['email'] = $o['email'];
+        }
+
+        Db::update('rma', $data, 'id = ?', [$rmaId]);
+        Rma::log($rmaId, 'Привʼязка до SalesDrive', (string)$rma['order_number'], $orderNumber, 'Замовлення знайдено вручну та привʼязано');
+
+        // Коментар у SalesDrive (як при створенні), якщо ще не додавали
+        $sdNote = '';
+        $fresh  = Rma::find($rmaId);
+        if ($fresh !== null && empty($fresh['sd_synced'])) {
+            if (\App\SalesDrive::appendNewRmaComment($fresh)) {
+                Db::update('rma', ['sd_synced' => 1], 'id = ?', [$rmaId]);
+                $sdNote = ' Коментар у SalesDrive додано.';
+            } else {
+                $sdNote = ' Але коментар у SalesDrive не додався — перевірте ключ бази заявок у Налаштуваннях.';
+            }
+        }
+
+        Session::flash('success', 'Замовлення привʼязано, дані підтягнуто.' . $sdNote);
+        Response::redirect('/admin/rma/' . $rmaId);
+    }
+
     /** Надіслати менеджеру в Telegram список посилок до отримання. */
     public function sendPickupList(): void
     {

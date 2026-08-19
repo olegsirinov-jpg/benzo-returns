@@ -40,9 +40,28 @@ $showBlk = function (string $key): bool {
     <a class="btn btn--ghost btn--sm" href="<?= e(url('/admin')) ?>">← До списку</a>
 </div>
 
-<?php if (!empty($rma['needs_manual_check'])): ?>
-    <div class="alert alert--warn" style="margin-top:16px">
-        ⚠️ Замовлення не знайдено автоматично в SalesDrive — перевірте дані вручну.
+<?php if (empty($rma['order_id_sd'])): ?>
+    <div class="card" style="margin-top:16px;border-left:3px solid var(--amber)">
+        <div class="card__title" style="margin-bottom:8px">Замовлення не привʼязане до SalesDrive</div>
+        <p class="small muted">
+            Автоматично не знайшлося (напр. клієнт помилився цифрою). Виправте номер / телефон
+            і привʼяжіть — підтягнемо дату замовлення, ПІБ, email, ТТН отримання
+            і запишемо коментар у SalesDrive.
+        </p>
+        <form method="post" action="<?= e(url('/admin/rma/' . $id . '/relink')) ?>">
+            <?= $token ?>
+            <div class="grid2">
+                <div class="field mb0">
+                    <label class="label">Номер замовлення</label>
+                    <input class="input mono" type="text" name="order_number" value="<?= e((string)$rma['order_number']) ?>">
+                </div>
+                <div class="field mb0">
+                    <label class="label">Телефон (як у замовленні)</label>
+                    <input class="input" type="text" name="phone" value="<?= e((string)$rma['phone']) ?>">
+                </div>
+            </div>
+            <button class="btn btn--sm mt16" type="submit">Знайти в SalesDrive і привʼязати</button>
+        </form>
     </div>
 <?php endif; ?>
 

@@ -49,6 +49,7 @@ $router->post('/admin/rma/{id}/np-create', 'AdminController@npCreate');
 $router->post('/admin/rma/{id}/np-cancel', 'AdminController@npCancel');
 $router->post('/admin/rma/{id}/np-track', 'AdminController@npTrack');
 $router->post('/admin/rma/{id}/light-check', 'AdminController@lightCheck');
+$router->post('/admin/rma/{id}/relink', 'AdminController@relinkOrder');
 $router->post('/admin/rma/{id}/refund-tg', 'AdminController@refundToTelegram');
 $router->post('/admin/rma/{id}/issue', 'AdminController@flagIssue');
 $router->post('/admin/rma/{id}/issue-clear', 'AdminController@clearIssue');
