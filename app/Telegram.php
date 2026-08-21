@@ -144,9 +144,23 @@ class Telegram
         }
         $lines[] = '';
         $lines[] = 'Заберіть посилки й позначте «Товар отримано» у відповідних заявках.';
+        $text = implode("\n", $lines);
 
-        $err = self::deliver(implode("\n", $lines), Config::str('tg_chat_id'));
-        return ['ok' => $err === '', 'error' => $err, 'count' => $count];
+        // Основний чат + додатковий чат працівника (якщо заданий і відмінний).
+        $chats  = [Config::str('tg_chat_id')];
+        $worker = trim(Config::str('tg_worker_chat_id'));
+        if ($worker !== '' && $worker !== Config::str('tg_chat_id')) {
+            $chats[] = $worker;
+        }
+
+        $errs = [];
+        foreach ($chats as $chat) {
+            $e = self::deliver($text, $chat);
+            if ($e !== '') {
+                $errs[] = $chat . ' — ' . $e;
+            }
+        }
+        return ['ok' => $errs === [], 'error' => implode('; ', $errs), 'count' => $count];
     }
 
     /**

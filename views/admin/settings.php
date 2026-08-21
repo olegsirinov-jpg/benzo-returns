@@ -269,6 +269,13 @@ $adminEmail = (string)(App\Auth::user()['email'] ?? '');
         </div>
 
         <div class="field mb0">
+            <label class="label" for="tg_worker_chat_id">Chat ID працівника <span class="muted">(необовʼязково)</span></label>
+            <input class="input mono" type="text" id="tg_worker_chat_id" name="tg_worker_chat_id"
+                   value="<?= e(Config::str('tg_worker_chat_id')) ?>" placeholder="напр. 123456789">
+            <div class="hint">Якщо заданий — список «📥 До отримання» додатково надсилатиметься сюди. Працівник має спершу написати боту.</div>
+        </div>
+
+        <div class="field mb0">
             <label class="label">Які події надсилати</label>
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
                 <label class="check mb0">
