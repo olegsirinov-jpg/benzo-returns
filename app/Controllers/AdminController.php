@@ -30,6 +30,9 @@ class AdminController
 
     public function index(): void
     {
+        // Якщо трекінг НП мовчить — попередити в Telegram (не частіше ніж раз на 6 год)
+        \App\CronBeat::alertIfNeeded();
+
         list($where, $params) = $this->buildFilters($_GET);
 
         $page  = max(1, (int)($_GET['page'] ?? 1));
@@ -55,6 +58,11 @@ class AdminController
             'filters'  => $_GET,
             'managers' => Db::all('SELECT id, name FROM users WHERE active = 1 ORDER BY name'),
             'counts'   => $this->statusCounts(),
+            // лічильники для чіпів «Проблеми» та «Ручна перевірка» (лише активні заявки)
+            'chipCounts' => [
+                'problem' => (int)Db::value("SELECT COUNT(*) FROM rma WHERE (inspection_issue = 1 OR np_cost_alert = 1) AND status NOT IN ('closed','cancelled')"),
+                'manual'  => (int)Db::value("SELECT COUNT(*) FROM rma WHERE needs_manual_check = 1 AND status NOT IN ('closed','cancelled')"),
+            ],
         ]);
     }
 
@@ -137,6 +145,10 @@ class AdminController
         }
         if (!empty($q['no_ttn'])) {
             $where[] = '(r.return_ttn IS NULL OR r.return_ttn = "")';
+        }
+        // чіп «Проблеми»: проблема при огляді або оплата на зворотній ТТН
+        if ((string)($q['flag'] ?? '') === 'problem') {
+            $where[] = '(r.inspection_issue = 1 OR r.np_cost_alert = 1)';
         }
 
         return [implode(' AND ', $where), $params];
@@ -1580,6 +1592,41 @@ class AdminController
 
         Session::flash('success', 'Замовлення привʼязано, дані підтягнуто.' . $sdNote);
         Response::redirect('/admin/rma/' . $rmaId);
+    }
+
+    /**
+     * Надіслати клієнту SMS/Viber з персональним посиланням на оформлення повернення:
+     * номер замовлення й телефон уже підставлені, тож клієнт не помилиться цифрою.
+     */
+    public function sendReturnLink(): void
+    {
+        Csrf::verify();
+
+        $order = Validate::orderNumber((string)($_POST['order_number'] ?? ''));
+        $phone = Validate::phone((string)($_POST['phone'] ?? ''));
+        if ($order === null || $phone === null) {
+            Session::flash('error', 'Вкажіть номер замовлення й коректний телефон клієнта.');
+            Response::redirect('/admin');
+        }
+        if (Validate::looksLikeNpTtn($order)) {
+            Session::flash('error', 'Схоже, це номер ТТН Нової пошти, а не номер замовлення.');
+            Response::redirect('/admin');
+        }
+
+        $link = url('/returns/new') . '?' . http_build_query(['order' => $order, 'phone' => $phone]);
+        $text = 'Повернення замовлення №' . $order . ': оформіть за посиланням, номер уже вказано ' . $link;
+
+        if (!\App\TurboSms::enabled()) {
+            Session::flash('error', 'SMS/Viber не налаштовано. Скопіюйте посилання й надішліть клієнту вручну: ' . $link);
+            Response::redirect('/admin');
+        }
+
+        $r = \App\TurboSms::send($phone, $text);
+        $r['ok']
+            ? Session::flash('success', 'Посилання на повернення надіслано на ' . Validate::phoneFormat($phone)
+                . ' (замовлення №' . $order . ').')
+            : Session::flash('error', 'Не вдалося надіслати: ' . $r['error'] . '. Посилання для ручної відправки: ' . $link);
+        Response::redirect('/admin');
     }
 
     /** Надіслати менеджеру в Telegram список посилок до отримання. */

@@ -71,4 +71,7 @@ $message = sprintf(
 );
 
 @file_put_contents(BASE_PATH . '/storage/logs/cron.log', $message . PHP_EOL, FILE_APPEND);
+\App\CronBeat::mark('stale');
+// заодно перевіряємо, чи живий трекінг НП (попередження в Telegram)
+\App\CronBeat::alertIfNeeded();
 echo $message . PHP_EOL;

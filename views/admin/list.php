@@ -37,12 +37,98 @@ $newCount = ($counts['new'] ?? 0);
 </div>
 
 <?php
+// ---- Чіпи швидких фільтрів (один клік) ----
+$chipCounts = $chipCounts ?? ['problem' => 0, 'manual' => 0];
+$curStatus  = $f('status');
+$curFlag    = $f('flag');
+$curManual  = $f('manual');
+$noOther    = $f('q') === '' && $curFlag === '' && $curManual === '';
+$chips = [
+    ['label' => 'Нові',           'q' => ['status' => 'new'],            'n' => (int)($counts['new'] ?? 0),            'color' => 'blue',   'active' => $curStatus === 'new' && $noOther],
+    ['label' => 'Погоджено',      'q' => ['status' => 'approved'],       'n' => (int)($counts['approved'] ?? 0),       'color' => 'green',  'active' => $curStatus === 'approved' && $noOther],
+    ['label' => 'У дорозі',       'q' => ['status' => 'in_transit'],     'n' => (int)($counts['in_transit'] ?? 0),     'color' => 'violet', 'active' => $curStatus === 'in_transit' && $noOther],
+    ['label' => 'До отримання',   'q' => ['status' => 'arrived'],        'n' => (int)($counts['arrived'] ?? 0),        'color' => 'amber',  'active' => $curStatus === 'arrived' && $noOther],
+    ['label' => 'Отримано',       'q' => ['status' => 'received'],       'n' => (int)($counts['received'] ?? 0),       'color' => 'violet', 'active' => $curStatus === 'received' && $noOther],
+    ['label' => 'На перевірці',   'q' => ['status' => 'inspection'],     'n' => (int)($counts['inspection'] ?? 0),     'color' => 'violet', 'active' => $curStatus === 'inspection' && $noOther],
+    ['label' => 'До виплати',     'q' => ['status' => 'refund_pending'], 'n' => (int)($counts['refund_pending'] ?? 0), 'color' => 'amber',  'active' => $curStatus === 'refund_pending' && $noOther],
+    ['label' => '⚠ Проблеми',     'q' => ['flag' => 'problem'],          'n' => (int)$chipCounts['problem'],           'color' => 'red',    'active' => $curFlag === 'problem' && $curStatus === '' && $f('q') === ''],
+    ['label' => 'Ручна перевірка','q' => ['manual' => '1'],              'n' => (int)$chipCounts['manual'],            'color' => 'amber',  'active' => $curManual !== '' && $curStatus === '' && $f('q') === '' && $curFlag === ''],
+];
+$allActive = $curStatus === '' && $noOther
+    && $f('reason') === '' && $f('action') === '' && $f('manager') === '' && $f('supplier') === ''
+    && $f('from') === '' && $f('to') === '' && $f('no_ttn') === '';
+?>
+<div class="chips">
+    <a class="chip<?= $allActive ? ' is-active' : '' ?>" href="<?= e(url('/admin')) ?>">Усі активні</a>
+    <?php foreach ($chips as $c): ?>
+        <a class="chip chip--<?= e($c['color']) ?><?= $c['active'] ? ' is-active' : '' ?><?= $c['n'] === 0 ? ' chip--zero' : '' ?>"
+           href="<?= e(url('/admin?' . http_build_query($c['q']))) ?>">
+            <?= e($c['label']) ?> <span class="chip__n"><?= (int)$c['n'] ?></span>
+        </a>
+    <?php endforeach; ?>
+</div>
+
+<!-- ---- Надіслати клієнту персональне посилання на повернення ---- -->
+<details class="fold card" style="padding:12px 16px">
+    <summary style="cursor:pointer;font-weight:600">📨 Надіслати клієнту посилання на повернення</summary>
+    <form method="post" action="<?= e(url('/admin/send-link')) ?>" id="send-link-form"
+          data-base="<?= e(url('/returns/new')) ?>" style="margin-top:12px">
+        <?= App\Csrf::field() ?>
+        <p class="small muted" style="margin-top:0">
+            Клієнт отримає SMS/Viber із посиланням, де номер замовлення й телефон уже вказані —
+            замовлення підтягнеться одразу, помилитися цифрою неможливо.
+        </p>
+        <div class="grid2">
+            <div class="field mb0">
+                <label class="label" for="sl-order">Номер замовлення</label>
+                <input class="input mono" type="text" id="sl-order" name="order_number" inputmode="numeric" autocomplete="off" required>
+            </div>
+            <div class="field mb0">
+                <label class="label" for="sl-phone">Телефон клієнта</label>
+                <input class="input" type="tel" id="sl-phone" name="phone" placeholder="067 123 45 67" autocomplete="off" required>
+            </div>
+        </div>
+        <div class="btn-row mt16" style="align-items:center">
+            <button class="btn btn--sm" type="submit">Надіслати SMS / Viber</button>
+            <button class="btn btn--sm btn--ghost" type="button" id="sl-copy">Скопіювати посилання</button>
+            <span class="small muted" id="sl-copied"></span>
+        </div>
+    </form>
+</details>
+<script>
+(function () {
+    var form = document.getElementById('send-link-form');
+    if (!form) { return; }
+    var btn = document.getElementById('sl-copy');
+    var out = document.getElementById('sl-copied');
+    btn.addEventListener('click', function () {
+        var order = document.getElementById('sl-order').value.trim();
+        var phone = document.getElementById('sl-phone').value.replace(/\D+/g, '');
+        if (!order) { out.textContent = 'Вкажіть номер замовлення.'; return; }
+        var link = form.getAttribute('data-base') + '?order=' + encodeURIComponent(order)
+                 + (phone ? '&phone=' + encodeURIComponent(phone) : '');
+        function done() { out.textContent = 'Скопійовано: ' + link; }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(done, function () { window.prompt('Скопіюйте посилання:', link); });
+        } else {
+            window.prompt('Скопіюйте посилання:', link);
+        }
+    });
+})();
+</script>
+
+<?php
 // скільки додаткових фільтрів активні (щоб підсвітити й розкрити)
 $advKeys = ['status', 'reason', 'action', 'manager', 'supplier', 'from', 'to', 'manual', 'no_ttn'];
 $advActive = 0;
+$advOpen = false;
 foreach ($advKeys as $k) {
     if ($f($k) !== '') {
         $advActive++;
+        // статус і «ручна перевірка» обираються чіпами — панель через них не розгортаємо
+        if ($k !== 'status' && $k !== 'manual') {
+            $advOpen = true;
+        }
     }
 }
 ?>
@@ -58,7 +144,7 @@ foreach ($advKeys as $k) {
             <?php endif; ?>
         </div>
 
-        <details class="fold filters-adv" <?= $advActive > 0 ? 'open' : '' ?>>
+        <details class="fold filters-adv" <?= $advOpen ? 'open' : '' ?>>
             <summary>
                 Додаткові фільтри<?= $advActive > 0 ? ' <span class="badge badge--blue">' . $advActive . '</span>' : '' ?>
             </summary>

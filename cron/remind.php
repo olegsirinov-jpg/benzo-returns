@@ -71,4 +71,5 @@ if ($reminded !== []) {
 
 $msg = sprintf('[%s] Нагадування про ТТН: надіслано %d.', date('Y-m-d H:i:s'), count($reminded));
 @file_put_contents(BASE_PATH . '/storage/logs/cron.log', $msg . PHP_EOL, FILE_APPEND);
+\App\CronBeat::mark('remind');
 echo $msg . PHP_EOL;

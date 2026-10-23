@@ -32,6 +32,7 @@ $rows = Rma::arrivedForPickup();
 if ($rows === []) {
     $msg = sprintf('[%s] Посилки до отримання: немає — нічого не надіслано.', date('Y-m-d H:i:s'));
     @file_put_contents(BASE_PATH . '/storage/logs/cron.log', $msg . PHP_EOL, FILE_APPEND);
+    \App\CronBeat::mark('pickup');
     echo $msg . PHP_EOL;
     exit;
 }
@@ -45,4 +46,5 @@ $msg = sprintf(
     $r['ok'] ? '' : ' (' . $r['error'] . ')'
 );
 @file_put_contents(BASE_PATH . '/storage/logs/cron.log', $msg . PHP_EOL, FILE_APPEND);
+\App\CronBeat::mark('pickup');
 echo $msg . PHP_EOL;

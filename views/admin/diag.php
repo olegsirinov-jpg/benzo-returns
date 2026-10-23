@@ -25,6 +25,51 @@ $isPlaceholder = strpos($url, 'yourdomain') !== false;
     <a class="btn btn--ghost btn--sm" href="<?= e(url('/admin')) ?>">← До заявок</a>
 </div>
 
+<!-- ==================== Cron-завдання ==================== -->
+<div class="card mt16">
+    <div class="card__title">Cron-завдання (автоматичні запуски)</div>
+    <table class="table">
+        <thead>
+            <tr><th>Завдання</th><th>Як часто</th><th>Останній запуск</th><th>Стан</th></tr>
+        </thead>
+        <tbody>
+        <?php foreach (App\CronBeat::jobs() as $job => $info): ?>
+            <?php
+            $last = App\CronBeat::last($job);
+            $mins = App\CronBeat::minutesSince($last);
+            if ($last === null) {
+                $badge = ['gray', 'ще не запускався'];
+            } elseif ($mins !== null && $mins > $info['max']) {
+                $badge = ['red', 'давно не запускався'];
+            } else {
+                $badge = ['green', 'працює'];
+            }
+            ?>
+            <tr>
+                <td>
+                    <?= e($info['label']) ?>
+                    <div class="small muted mono">cron/<?= e($job) ?>.php</div>
+                </td>
+                <td class="small"><?= e($info['every']) ?></td>
+                <td class="small nowrap">
+                    <?php if ($last === null): ?>—<?php else: ?>
+                        <?= e(date('d.m.Y H:i', (int)strtotime($last))) ?>
+                        <div class="muted"><?= e(App\CronBeat::human((int)$mins)) ?> тому</div>
+                    <?php endif; ?>
+                </td>
+                <td><span class="badge badge--<?= e($badge[0]) ?>"><?= e($badge[1]) ?></span></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <p class="small muted mb0" style="margin-top:10px">
+        Команда для cPanel → Cron Jobs:
+        <span class="mono">/opt/cpanel/ea-php81/root/usr/bin/php <?= e(BASE_PATH) ?>/cron/nptrack.php</span>
+        (для інших завдань — так само, змінивши назву файлу). Якщо трекінг мовчить понад 2 год —
+        адмін бачить попередження вгорі адмінки й отримує сповіщення в Telegram.
+    </p>
+</div>
+
 <div class="card mt16">
     <div class="card__title">Поточні налаштування</div>
     <table class="kv">

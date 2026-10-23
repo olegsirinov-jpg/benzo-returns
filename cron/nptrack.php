@@ -32,6 +32,7 @@ if (!$isCli) {
 
 if (!NovaPoshta::enabled()) {
     echo "Нова пошта вимкнена — трекінг пропущено.\n";
+    \App\CronBeat::mark('nptrack');
     exit;
 }
 
@@ -91,4 +92,5 @@ $msg = sprintf(
     date('Y-m-d H:i:s'), $checked, $moved, count($lightRows), $lightDetected
 );
 @file_put_contents(BASE_PATH . '/storage/logs/cron.log', $msg . PHP_EOL, FILE_APPEND);
+\App\CronBeat::mark('nptrack');
 echo $msg . PHP_EOL;

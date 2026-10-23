@@ -34,6 +34,7 @@ $router->get('/admin/logout', 'AuthController@logout');
 // ---- Адмінка ----
 $router->get('/admin', 'AdminController@index');
 $router->post('/admin/pickup-list', 'AdminController@sendPickupList');
+$router->post('/admin/send-link', 'AdminController@sendReturnLink');
 $router->get('/admin/rma-new', 'AdminController@createForm');
 $router->post('/admin/rma-new', 'AdminController@createSubmit');
 $router->post('/admin/rma-lookup', 'AdminController@lookupOrder');

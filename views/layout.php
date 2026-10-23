@@ -44,6 +44,24 @@ $isAdmin = strpos(App\Router::uri(), '/admin') === 0;
 <?php foreach ($flashes as $f): ?>
     <div class="alert alert--<?= e($f['type']) ?>"><?= e($f['message']) ?></div>
 <?php endforeach; ?>
+<?php
+// Попередження адміну, якщо cron трекінгу НП давно не запускався
+$cronProblem = '';
+if ($isAdmin && App\Auth::check() && App\Auth::isAdmin()) {
+    try {
+        $cronProblem = App\CronBeat::trackingProblem();
+    } catch (\Throwable $e) {
+        $cronProblem = '';
+    }
+}
+?>
+<?php if ($cronProblem !== ''): ?>
+    <div class="alert alert--error">
+        ⚠️ <strong>Cron не працює.</strong> <?= e($cronProblem) ?>
+        Без нього не оновлюються статуси посилок, маячки оплати, «Легке повернення» й «До отримання».
+        <a href="<?= e(url('/admin/diag')) ?>">Деталі →</a>
+    </div>
+<?php endif; ?>
 <?= $content ?>
 </main>
 

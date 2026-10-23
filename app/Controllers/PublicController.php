@@ -39,7 +39,26 @@ class PublicController
 
     public function form(): void
     {
+        // Персональне посилання від менеджера: /returns/new?order=12345&phone=380...
+        // Номер і телефон підставляються самі — клієнт не помилиться цифрою.
+        $prefill = null;
+        $pOrder  = Validate::orderNumber((string)($_GET['order'] ?? ''));
+        $pPhone  = Validate::phone((string)($_GET['phone'] ?? ''));
+        if ($pOrder !== null && !Validate::looksLikeNpTtn($pOrder)) {
+            $prefill = [
+                'order_number' => $pOrder,
+                'phone'        => $pPhone !== null ? Validate::phoneFormat($pPhone) : '',
+            ];
+        }
+
+        $restore = $this->restorableLookup();
+        // посилання на інше замовлення важливіше за раніше знайдене в цій сесії
+        if ($prefill !== null && $restore !== null && (string)$restore['order_number'] !== $prefill['order_number']) {
+            $restore = null;
+        }
+
         View::render('public/form', [
+            'prefill'     => $prefill,
             'title'      => 'Заявка на повернення',
             'reasons'    => Dict::reasons(),
             'actions'    => Dict::actions(),
@@ -47,7 +66,7 @@ class PublicController
             'needDefect'  => Dict::reasonsRequiringDefectPhoto(),
             'returnDays'  => Env::int('RETURN_DAYS', 14),
             'errors'      => Session::pull('_errors', []),
-            'restore'     => $this->restorableLookup(),
+            'restore'     => $restore,
         ]);
         // старі значення живуть рівно один показ форми
         Session::forget('_old');

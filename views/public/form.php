@@ -20,8 +20,21 @@ $cls = function (string $key, string $base) use ($errors) {
     Спершу оформіть заявку — менеджер перевірить інформацію та надішле інструкцію для відправки.
 </div>
 
+<?php
+// Персональне посилання: номер (і телефон) уже підставлені
+$prefill    = $prefill ?? null;
+$autoLookup = !empty($prefill) && ($prefill['phone'] ?? '') !== '' && empty($restore) && empty($errors);
+?>
+<?php if (!empty($prefill) && empty($errors)): ?>
+    <div class="alert alert--info">
+        Номер замовлення <strong>№<?= e($prefill['order_number']) ?></strong> уже вказано за посиланням від менеджера.
+        <?= $autoLookup ? 'Шукаємо ваше замовлення…' : 'Перевірте телефон і натисніть «Знайти замовлення».' ?>
+    </div>
+<?php endif; ?>
+
 <form id="rma-form" method="post" action="<?= e(url('/returns/submit')) ?>"
       data-lookup-url="<?= e(url('/returns/lookup')) ?>"
+      <?php if ($autoLookup): ?>data-autolookup="1"<?php endif; ?>
       <?php if (!empty($restore)): ?>data-restore="<?= e(json_encode($restore, JSON_UNESCAPED_UNICODE)) ?>"<?php endif; ?>
       enctype="multipart/form-data" novalidate>
 <?= App\Csrf::field() ?>
@@ -34,7 +47,7 @@ $cls = function (string $key, string $base) use ($errors) {
             <div class="field">
                 <label class="label" for="order_number">Номер замовлення <span class="req">*</span></label>
                 <input class="<?= $cls('order_number', 'input') ?>" type="text" id="order_number" name="order_number"
-                       value="<?= e(old('order_number', $restore['order_number'] ?? '')) ?>" autocomplete="off" inputmode="numeric">
+                       value="<?= e(old('order_number', $restore['order_number'] ?? ($prefill['order_number'] ?? ''))) ?>" autocomplete="off" inputmode="numeric">
                 <div class="hint">Номер вказаний у СМС або листі про підтвердження замовлення. Це <strong>не</strong> номер накладної Нової пошти.</div>
                 <div class="error-text hidden" id="ttn-warn">
                     Схоже, це номер накладної Нової пошти (ТТН), а не номер замовлення.
@@ -45,7 +58,7 @@ $cls = function (string $key, string $base) use ($errors) {
             <div class="field">
                 <label class="label" for="phone">Телефон, вказаний у замовленні <span class="req">*</span></label>
                 <input class="<?= $cls('phone', 'input') ?>" type="tel" id="phone" name="phone"
-                       value="<?= e(old('phone', $restore['phone'] ?? '')) ?>" placeholder="067 123 45 67" autocomplete="tel">
+                       value="<?= e(old('phone', $restore['phone'] ?? ($prefill['phone'] ?? ''))) ?>" placeholder="067 123 45 67" autocomplete="tel">
                 <?= $err('phone') ?>
             </div>
         </div>
