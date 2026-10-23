@@ -516,6 +516,10 @@ class NovaPoshta
             $out[$num] = [
                 'code'   => (int)($row['StatusCode'] ?? 0),
                 'status' => (string)($row['Status'] ?? ''),
+                // дата створення накладної (формат НП: d-m-Y H:i:s)
+                'created' => (string)($row['DateCreated'] ?? ''),
+                // місто отримувача — щоб відрізнити повернення до нас від доставки клієнту
+                'recipient_city_ref' => (string)($row['RefCityRecipient'] ?? ''),
                 // легке повернення (клієнт оформив сам у застосунку НП)
                 'light_possible' => !empty($row['PossibilityLightReturn']),
                 'light_ttn'      => (string)($row['LightReturnNumber'] ?? ''),

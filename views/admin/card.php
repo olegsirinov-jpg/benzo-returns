@@ -81,6 +81,20 @@ $showBlk = function (string $key): bool {
     </div>
 <?php endif; ?>
 
+<?php if (App\Rma::wrongReturnTtnReason($rma) !== ''): ?>
+    <div class="alert alert--error" style="margin-top:16px">
+        🔁 <strong>ТТН повернення збігається з ТТН, якою клієнт отримував замовлення.</strong>
+        Клієнт вписав не той номер — статус за трекінгом автоматично не змінюється.
+        Якщо клієнт оформив «Легке повернення», сервіс сам замінить номер при найближчому трекінгу
+        (або натисніть кнопку нижче). Інакше попросіть у клієнта номер накладної,
+        якою він відправив товар, і виправте його у блоці «Доставка».
+        <form method="post" action="<?= e(url('/admin/rma/' . $id . '/light-check')) ?>" style="margin-top:8px">
+            <?= $token ?>
+            <button class="btn btn--sm" type="submit">Перевірити «Легке повернення» зараз</button>
+        </form>
+    </div>
+<?php endif; ?>
+
 <?php if (!empty($rma['inspection_issue'])): ?>
     <div class="alert alert--warn" style="margin-top:16px">
         🛠 <strong>Проблема при огляді посилки.</strong>
@@ -399,8 +413,53 @@ $canReject = App\Workflow::canReject($status);
                                 formaction="<?= e(url('/admin/rma/' . $id . '/refund-tg')) ?>" formnovalidate>
                             📤 Надіслати реквізити в Telegram
                         </button>
+                        <button type="button" class="btn btn--sm btn--ghost" id="refund-show">🖼 Показати для фото</button>
                         <span class="hint">Готовий формат для копіювання в НоваПей</span>
                     </div>
+
+                    <!-- Вспливаюче вікно з реквізитами (для фото) -->
+                    <div id="refund-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;padding:16px">
+                        <div style="background:#fff;border-radius:12px;max-width:560px;width:100%;padding:26px 28px 22px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px">
+                                <div style="font-size:16px;font-weight:650">Реквізити для повернення</div>
+                                <button type="button" class="btn btn--sm btn--ghost" id="refund-modal-close">Закрити</button>
+                            </div>
+                            <div id="refund-modal-body" class="mono"></div>
+                        </div>
+                    </div>
+                    <script>
+                    (function () {
+                        var btn = document.getElementById('refund-show');
+                        if (!btn) { return; }
+                        var modal = document.getElementById('refund-modal');
+                        var body  = document.getElementById('refund-modal-body');
+                        function val(n) { var el = document.querySelector('[name="' + n + '"]'); return el ? el.value.trim() : ''; }
+                        function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+                        btn.addEventListener('click', function () {
+                            var rows = [
+                                ['ПІБ отримувача', val('refund_name')],
+                                ['IBAN', val('refund_iban')],
+                                ['ІПН', val('refund_tax_id')]
+                            ];
+                            var amount = val('refund_amount');
+                            if (amount) { rows.push(['Сума', amount + ' грн']); }
+                            rows.push(['Призначення', 'Дохід не підлягає оподаткуванню, повернення коштів']);
+                            var html = '';
+                            rows.forEach(function (r) {
+                                html += '<div style="margin-bottom:14px">'
+                                     +  '<div style="font-size:13px;color:#6b7280">' + r[0] + '</div>'
+                                     +  '<div style="font-size:22px;font-weight:600;line-height:1.3;word-break:break-all">' + esc(r[1] || '—') + '</div>'
+                                     +  '</div>';
+                            });
+                            body.innerHTML = html;
+                            modal.style.display = 'flex';
+                        });
+                        function hide() { modal.style.display = 'none'; }
+                        document.getElementById('refund-modal-close').addEventListener('click', hide);
+                        modal.addEventListener('click', function (e) { if (e.target === modal) { hide(); } });
+                        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { hide(); } });
+                    })();
+                    </script>
                 <?php endif; ?>
             </div>
             <?php endif; ?>

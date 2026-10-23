@@ -60,6 +60,15 @@ $comments = $comments ?? [];
     elseif ($isManual) { $ttnSourceLabel = 'вказано вами'; }
 
     $payerLabel = App\Dict::shippingPayers()[(string)$rma['shipping_payer']] ?? 'За домовленістю';
+
+    // ТТН, з якою клієнт ОТРИМУВАВ замовлення — її вписувати не можна
+    $origTtn = preg_replace('/\D+/', '', (string)($rma['np_original_ttn'] ?? '')) ?? '';
+
+    // Попередження про підозрілий номер (чекає підтвердження клієнта)
+    $ttnWarn = App\Session::get('_ttn_warn');
+    if (!is_array($ttnWarn) || (int)($ttnWarn['rma_id'] ?? 0) !== (int)$rma['id']) {
+        $ttnWarn = null;
+    }
     ?>
 
     <h1>Заявка <span class="mono"><?= e($rma['rma_number']) ?></span></h1>
@@ -151,6 +160,33 @@ $comments = $comments ?? [];
         </div>
     <?php endif; ?>
 
+    <?php if ($ttnWarn !== null): ?>
+        <div class="card" id="ttn-warn-card" style="border-left:4px solid var(--amber)">
+            <h2 class="mt0">Перевірте номер накладної</h2>
+            <div class="alert alert--warn" style="margin-top:0">
+                <?= e((string)$ttnWarn['msg']) ?>
+            </div>
+            <p class="small">
+                Нам потрібен номер накладної, якою ви <strong>відправили товар нам</strong>
+                (на ФОП Шірінов О. І., Софіївська Борщагівка, відділення №3). Його видно в застосунку
+                Nova Post у розділі «Мої відправлення» або на чеку з відділення.
+            </p>
+            <form method="post" action="<?= e(url('/returns/ttn')) ?>">
+                <?= App\Csrf::field() ?>
+                <input type="hidden" name="carrier" value="novaposhta">
+                <input type="hidden" name="ttn" value="<?= e((string)$ttnWarn['ttn']) ?>">
+                <label class="check">
+                    <input type="checkbox" name="confirm_ttn" value="1" required>
+                    <span>Я перевірив(ла): <strong class="mono"><?= e((string)$ttnWarn['ttn']) ?></strong> — це саме накладна, якою я відправив(ла) товар вам.</span>
+                </label>
+                <div class="btn-row">
+                    <button class="btn btn--ghost" type="submit">Так, зберегти цей номер</button>
+                </div>
+            </form>
+            <p class="small muted mb0" style="margin-top:12px">Якщо номер не той — просто введіть правильний у формі нижче.</p>
+        </div>
+    <?php endif; ?>
+
     <?php // ── ВІДПРАВЛЕННЯ ТОВАРУ ─────────────────────────────────── ?>
 
     <?php if ($isLight): ?>
@@ -187,7 +223,13 @@ $comments = $comments ?? [];
                         <input type="hidden" name="carrier" value="novaposhta">
                         <div class="field">
                             <label class="label" for="ttn">ТТН Нової пошти</label>
-                            <input class="input mono" type="text" id="ttn" name="ttn" value="<?= e($returnTtn) ?>">
+                            <input class="input mono js-ttn" type="text" id="ttn" name="ttn" value="<?= e($returnTtn) ?>"
+                                   data-orig="<?= e($origTtn) ?>" inputmode="numeric" autocomplete="off">
+                            <div class="error-text hidden js-ttn-err">
+                                Це номер накладної, з якою ви <strong>отримували</strong> замовлення.
+                                Потрібен номер нової накладної, якою ви відправили товар нам.
+                                Якщо ви оформили по ній «Легке повернення» — можете зберегти, ми самі знайдемо його номер.
+                            </div>
                         </div>
                         <button class="btn btn--ghost" type="submit">Оновити ТТН</button>
                     </form>
@@ -303,9 +345,26 @@ $comments = $comments ?? [];
                     <?= App\Csrf::field() ?>
                     <input type="hidden" name="carrier" value="novaposhta">
                     <div class="field">
-                        <label class="label" for="ttn">Номер ТТН Нової пошти</label>
-                        <input class="input mono" type="text" id="ttn" name="ttn"
-                               value="<?= e($returnTtn) ?>" placeholder="20450000000000">
+                        <label class="label" for="ttn">Номер ТТН <u>вашого відправлення</u> (Нова пошта)</label>
+                        <input class="input mono js-ttn" type="text" id="ttn" name="ttn"
+                               value="<?= e($returnTtn) ?>" placeholder="20450000000000"
+                               data-orig="<?= e($origTtn) ?>" inputmode="numeric" autocomplete="off">
+                        <div class="hint">
+                            Вкажіть номер <strong>нової</strong> накладної, яку ви оформили, відправляючи товар нам.
+                            <?php if ($origTtn !== ''): ?>
+                                Номер <span class="mono"><?= e($origTtn) ?></span> — це накладна, з якою ви отримували
+                                замовлення, його вписувати <strong>не потрібно</strong>. А якщо ви оформили «Легке повернення» —
+                                вводити взагалі нічого не треба, ми побачимо його автоматично.
+                            <?php else: ?>
+                                Не плутайте з номером, з яким ви отримували замовлення. Для «Легкого повернення» вкажіть номер, який
+                                Нова пошта створила саме для повернення.
+                            <?php endif; ?>
+                        </div>
+                        <div class="error-text hidden js-ttn-err">
+                            Це номер накладної, з якою ви <strong>отримували</strong> замовлення.
+                            Потрібен номер нової накладної, якою ви відправили товар нам.
+                            Якщо ви оформили по ній «Легке повернення» — можете зберегти, ми самі знайдемо його номер.
+                        </div>
                     </div>
                     <button class="btn" type="submit">Зберегти ТТН</button>
                 </form>
@@ -370,6 +429,25 @@ $comments = $comments ?? [];
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+
+    <script>
+    // Миттєва перевірка: не дати вписати ТТН, з якою клієнт отримував замовлення
+    (function () {
+        var inputs = document.querySelectorAll('.js-ttn');
+        Array.prototype.forEach.call(inputs, function (inp) {
+            var orig = (inp.getAttribute('data-orig') || '').replace(/\D+/g, '');
+            if (!orig) { return; }
+            var err = inp.parentNode.querySelector('.js-ttn-err');
+            function check() {
+                var bad = inp.value.replace(/\D+/g, '') === orig;
+                if (err) { err.classList.toggle('hidden', !bad); }
+                inp.classList.toggle('input--error', bad);
+            }
+            inp.addEventListener('input', check);
+            check();
+        });
+    })();
+    </script>
 
     <div class="btn-row">
         <a class="btn btn--ghost" href="<?= e(url('/returns/status?new=1')) ?>">Перевірити іншу заявку</a>

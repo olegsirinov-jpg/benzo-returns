@@ -67,8 +67,13 @@ foreach ($rows as $row) {
 $lightRows = Db::all(
     "SELECT id FROM rma
      WHERE np_original_ttn IS NOT NULL AND np_original_ttn <> ''
-       AND (return_ttn IS NULL OR return_ttn = '')
-       AND status IN ('new','manager_review','approved','waiting_customer_shipment','need_more_info')
+       AND (
+            ((return_ttn IS NULL OR return_ttn = '')
+              AND status IN ('new','manager_review','approved','waiting_customer_shipment','need_more_info'))
+            -- клієнт помилково вписав ТТН доставки замовлення: шукаємо справжнє Легке повернення
+         OR (return_ttn = np_original_ttn
+              AND status IN ('new','manager_review','approved','waiting_customer_shipment','need_more_info','in_transit','arrived'))
+       )
      ORDER BY id
      LIMIT 100"
 );

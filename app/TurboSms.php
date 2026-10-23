@@ -57,7 +57,7 @@ class TurboSms
             CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . Config::str('sms_token'),
+                'Authorization: Bearer ' . trim(Config::str('sms_token')),
                 'Content-Type: application/json',
             ],
             CURLOPT_CONNECTTIMEOUT => 10,

@@ -8,6 +8,7 @@ use App\Db;
 use App\Dict;
 use App\Env;
 use App\Notify;
+use App\NovaPoshta;
 use App\Response;
 use App\Rma;
 use App\SalesDrive;
@@ -618,6 +619,60 @@ class PublicController
             Response::redirect('/returns/status');
         }
 
+        // Запобіжник: клієнти часто вписують ТТН, з якою ОТРИМУВАЛИ замовлення.
+        $check = $this->ttnSanity($rma, $ttn);
+        if ($check['block'] !== '') {
+            Session::forget('_ttn_warn');
+            Session::flash('error', $check['block']);
+            Response::redirect('/returns/status');
+        }
+        // Знайдено «Легке повернення» — зберігаємо САМЕ його номер як ТТН повернення
+        if ($check['light'] !== '') {
+            Session::forget('_ttn_warn');
+            $lightTtn = $check['light'];
+            $upd = [
+                'return_ttn' => $lightTtn,
+                'ttn_source' => 'light_return',
+                'carrier'    => 'novaposhta',
+                'shipped_at' => date('Y-m-d'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+            if ($check['orig'] !== '' && empty($rma['np_original_ttn'])) {
+                $upd['np_original_ttn'] = $check['orig'];
+            }
+            Db::update('rma', $upd, 'id = ?', [$rmaId]);
+            Rma::log($rmaId, 'ТТН повернення (Легке повернення НП)', (string)$rma['return_ttn'], $lightTtn,
+                'Клієнт вказав ' . $ttn . ' — визначено як «Легке повернення»', null, 'Клієнт');
+
+            if (in_array((string)$rma['status'], ['approved', 'waiting_customer_shipment', 'manager_review', 'new'], true)) {
+                Rma::setStatus($rmaId, 'in_transit');
+            }
+            try {
+                Telegram::ttnAdded($rma, $lightTtn);
+            } catch (\Throwable $e) {
+                error_log('Telegram: ' . $e->getMessage());
+            }
+
+            $entered = preg_replace('/\D+/', '', $ttn) ?? '';
+            Session::flash('success', $entered === $lightTtn
+                ? 'Дякуємо! Номер «Легкого повернення» збережено, менеджер очікує посилку.'
+                : 'Ви вказали номер накладної, з якою отримували замовлення, — але ми знайшли ваше '
+                  . '«Легке повернення» за ним. Збережено його номер: ' . $lightTtn . '. Менеджер очікує посилку.');
+            Response::redirect('/returns/status');
+        }
+
+        $warned    = Session::get('_ttn_warn');
+        $confirmed = !empty($_POST['confirm_ttn'])
+            && is_array($warned)
+            && (int)($warned['rma_id'] ?? 0) === (int)$rmaId
+            && (string)($warned['ttn'] ?? '') === $ttn;
+        if ($check['warn'] !== '' && !$confirmed) {
+            // Не зберігаємо — показуємо попередження й просимо свідомо підтвердити
+            Session::set('_ttn_warn', ['rma_id' => (int)$rmaId, 'ttn' => $ttn, 'msg' => $check['warn']]);
+            Response::redirect('/returns/status');
+        }
+        Session::forget('_ttn_warn');
+
         $carrier = (string)($_POST['carrier'] ?? 'novaposhta');
         if (!isset(Dict::carriers()[$carrier])) {
             $carrier = 'other';
@@ -632,6 +687,16 @@ class PublicController
         ], 'id = ?', [$rmaId]);
 
         Rma::log($rmaId, 'return_ttn', (string)$rma['return_ttn'], $ttn, 'ТТН додано клієнтом', null, 'Клієнт');
+
+        // Клієнт підтвердив номер попри попередження — хай менеджер перевірить
+        if ($check['warn'] !== '') {
+            Rma::comment(
+                $rmaId,
+                '⚠️ Клієнт підтвердив ТТН ' . $ttn . ' попри попередження: ' . $check['warn'] . ' Перевірте номер.',
+                'internal',
+                'Система'
+            );
+        }
 
         if (in_array((string)$rma['status'], ['approved', 'waiting_customer_shipment'], true)) {
             Rma::setStatus($rmaId, 'in_transit');
@@ -648,6 +713,109 @@ class PublicController
     }
 
     // ---- helpers ----
+
+    /**
+     * Перевірка, що клієнт ввів саме ТТН ПОВЕРНЕННЯ, а не ту, з якою отримував замовлення.
+     *
+     * block — номер точно хибний (не приймаємо);
+     * warn  — номер підозрілий (приймаємо лише після свідомого підтвердження).
+     *
+     * light — знайдено «Легке повернення»: зберігаємо САМЕ цей номер (а не введений);
+     * orig  — якщо введений номер виявився ТТН доставки, якої ми ще не знали.
+     *
+     * @param array<string,mixed> $rma
+     * @return array{block:string,warn:string,light:string,orig:string}
+     */
+    private function ttnSanity(array $rma, string $ttn): array
+    {
+        $ok     = ['block' => '', 'warn' => '', 'light' => '', 'orig' => ''];
+        $digits = preg_replace('/\D+/', '', $ttn) ?? '';
+        $orig   = preg_replace('/\D+/', '', (string)($rma['np_original_ttn'] ?? '')) ?? '';
+        $npOn   = NovaPoshta::enabled();
+
+        // Номер «Легкого повернення», оформленого по ТТН доставки (його пише НП на оригінальній ТТН)
+        $lightFor = static function (string $deliveryTtn) use ($npOn): string {
+            if (!$npOn || $deliveryTtn === '') {
+                return '';
+            }
+            try {
+                $lr = NovaPoshta::lightReturnInfo($deliveryTtn);
+            } catch (\Throwable $e) {
+                return '';
+            }
+            return preg_replace('/\D+/', '', (string)($lr['ttn'] ?? '')) ?? '';
+        };
+
+        // 1. Клієнт ввів ТТН, з якою ОТРИМУВАВ замовлення
+        if ($orig !== '' && $digits === $orig) {
+            // Часто так роблять після «Легкого повернення», думаючи, що номер той самий.
+            // Якщо НП уже створила Легке повернення — просто беремо його номер.
+            $lr = $lightFor($orig);
+            if ($lr !== '') {
+                return ['block' => '', 'warn' => '', 'light' => $lr, 'orig' => ''];
+            }
+            return ['warn' => '', 'light' => '', 'orig' => '', 'block' => 'Це номер накладної, з якою ми надсилали вам замовлення. '
+                . 'Потрібен номер НОВОЇ накладної — тієї, якою ви відправили товар нам '
+                . '(видно в застосунку Nova Post у «Моїх відправленнях» або на чеку з відділення). '
+                . 'Якщо ви оформили «Легке повернення» — його номер ще не зʼявився в Новій пошті; '
+                . 'він підтягнеться в заявку автоматично, вводити нічого не потрібно.'];
+        }
+
+        // 2. Далі — перевірка в Новій пошті (якщо API недоступне — не заважаємо клієнту)
+        if (!$npOn) {
+            return $ok;
+        }
+        try {
+            $raw = NovaPoshta::trackRaw($ttn, (string)($rma['phone'] ?? ''));
+        } catch (\Throwable $e) {
+            return $ok;
+        }
+        if (empty($raw['ok'])) {
+            return $ok;
+        }
+        $row  = $raw['row'];
+        $code = (int)($row['StatusCode'] ?? 0);
+
+        if ($code === 3) {
+            return ['block' => '', 'warn' => 'Нова пошта не знайшла накладну з номером ' . $ttn
+                . '. Перевірте, будь ласка, номер — можливо, помилка в цифрі.', 'light' => '', 'orig' => ''];
+        }
+        if ($code === 2) {
+            return ['block' => '', 'warn' => 'Накладну ' . $ttn . ' у Новій пошті видалено. '
+                . 'Перевірте номер або оформіть нову накладну.', 'light' => '', 'orig' => ''];
+        }
+
+        // 3. Ввели ТТН доставки, якої ми не знали (замовлення не підтягнулось),
+        //    а по ній уже оформлено «Легке повернення» — беремо його номер
+        $lrHere = preg_replace('/\D+/', '', (string)($row['LightReturnNumber'] ?? '')) ?? '';
+        if ($lrHere !== '' && $lrHere !== $digits) {
+            return ['block' => '', 'warn' => '', 'light' => $lrHere, 'orig' => $digits];
+        }
+
+        // 4. Ввели номер самого «Легкого повернення» — це правильно, позначаємо джерело
+        if ($orig !== '' && $lightFor($orig) === $digits) {
+            return ['block' => '', 'warn' => '', 'light' => $digits, 'orig' => ''];
+        }
+
+        // 5. Посилка їде на нашу точку прийому — усе гаразд, навіть якщо створена раніше
+        $ourCity = \App\Config::str('np_recipient_city_ref');
+        if ($ourCity !== '' && (string)($row['RefCityRecipient'] ?? '') === $ourCity) {
+            return $ok;
+        }
+
+        // 6. Накладну створено задовго до заявки й вона йде не до нас —
+        //    найчастіше це накладна, з якою клієнт отримував замовлення
+        $created    = \DateTime::createFromFormat('d-m-Y H:i:s', (string)($row['DateCreated'] ?? ''));
+        $rmaCreated = strtotime((string)($rma['created_at'] ?? ''));
+        if ($created !== false && $rmaCreated !== false && $created->getTimestamp() < $rmaCreated - 3 * 3600) {
+            return ['block' => '', 'warn' => 'Цю накладну створено ' . $created->format('d.m.Y')
+                . ' — ще до того, як ви оформили заявку на повернення, і вона адресована не на наше відділення. '
+                . 'Схоже, це накладна, з якою ви отримували замовлення, а не та, якою відправили товар нам.',
+                'light' => '', 'orig' => ''];
+        }
+
+        return $ok;
+    }
 
     /**
      * @param array<string,mixed>      $post

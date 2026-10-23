@@ -307,12 +307,51 @@ class Rma
             }
         }
 
+        // Запобіжник: якщо ТТН повернення — це насправді накладна, з якою клієнт
+        // отримував замовлення, її статус «Отримано» не означає, що ми отримали повернення.
+        // У такому разі статус заявки автоматично не рухаємо.
+        $suspect = self::wrongReturnTtnReason($rma, $info);
+        if ($suspect !== '') {
+            return ['ok' => true, 'status' => $info['status'] . ' (статус заявки не змінено: ' . $suspect . ')', 'error' => ''];
+        }
+
         $target = NovaPoshta::trackingTargetStatus($info['code']);
         if ($target !== null) {
             self::advanceStatus($rmaId, (string)$rma['status'], $target);
         }
 
         return ['ok' => true, 'status' => $info['status'], 'error' => ''];
+    }
+
+    /**
+     * Чому ТТН повернення схожа на накладну доставки замовлення ('' — усе гаразд).
+     *
+     * @param array<string,mixed> $rma
+     * @param array<string,mixed> $info дані трекінгу НП
+     */
+    public static function wrongReturnTtnReason(array $rma, array $info = []): string
+    {
+        $ret  = preg_replace('/\D+/', '', (string)($rma['return_ttn'] ?? '')) ?? '';
+        $orig = preg_replace('/\D+/', '', (string)($rma['np_original_ttn'] ?? '')) ?? '';
+        if ($ret !== '' && $orig !== '' && $ret === $orig) {
+            return 'це ТТН доставки замовлення';
+        }
+        // Накладну магазину й Легке повернення не перевіряємо — їх джерело надійне
+        $src = (string)($rma['ttn_source'] ?? '');
+        if ($src === 'our_np' || $src === 'light_return') {
+            return '';
+        }
+        // Посилка їде на нашу точку прийому — це повернення до нас, незалежно від дати
+        $ourCity = Config::str('np_recipient_city_ref');
+        if ($ourCity !== '' && (string)($info['recipient_city_ref'] ?? '') === $ourCity) {
+            return '';
+        }
+        $created    = \DateTime::createFromFormat('d-m-Y H:i:s', (string)($info['created'] ?? ''));
+        $rmaCreated = strtotime((string)($rma['created_at'] ?? ''));
+        if ($created !== false && $rmaCreated !== false && $created->getTimestamp() < $rmaCreated - 3 * 3600) {
+            return 'накладну створено ' . $created->format('d.m.Y') . ', раніше за заявку';
+        }
+        return '';
     }
 
     /**
@@ -382,8 +421,11 @@ class Rma
         if ($rma === null || empty($rma['np_original_ttn'])) {
             return ['ok' => false, 'detected' => false, 'ttn' => ''];
         }
-        // якщо ТТН повернення вже є (наша накладна чи ручна) — не чіпаємо
-        if (!empty($rma['return_ttn'])) {
+        // якщо ТТН повернення вже є (наша накладна чи ручна) — не чіпаємо.
+        // Виняток: клієнт помилково вписав ТТН доставки замовлення — тоді вона не рахується.
+        $retD  = preg_replace('/\D+/', '', (string)($rma['return_ttn'] ?? '')) ?? '';
+        $origD = preg_replace('/\D+/', '', (string)$rma['np_original_ttn']) ?? '';
+        if ($retD !== '' && $retD !== $origD) {
             return ['ok' => true, 'detected' => false, 'ttn' => ''];
         }
 
