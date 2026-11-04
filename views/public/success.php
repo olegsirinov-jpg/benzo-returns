@@ -28,3 +28,7 @@
 
     <p class="hint mt16">Збережіть номер заявки — він знадобиться для перевірки статусу.</p>
 </div>
+<script>
+// заявку прийнято — чернетка форми більше не потрібна
+try { sessionStorage.removeItem('rma_draft'); } catch (e) {}
+</script>

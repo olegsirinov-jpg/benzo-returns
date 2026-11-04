@@ -10,6 +10,33 @@ class Upload
     const MAX_SIZE     = 10485760; // 10 MB
     const MAX_DIMENSION = 1800;    // px по довшій стороні після стиснення
 
+    /**
+     * Значення ліміту з php.ini («8M», «64M», «1G») у байтах. 0 — невідомо/без ліміту.
+     */
+    public static function iniBytes(string $v): int
+    {
+        $v = trim($v);
+        if ($v === '') {
+            return 0;
+        }
+        $n    = (int)$v;
+        $unit = strtolower(substr($v, -1));
+        if ($unit === 'g') {
+            $n *= 1024 * 1024 * 1024;
+        } elseif ($unit === 'm') {
+            $n *= 1024 * 1024;
+        } elseif ($unit === 'k') {
+            $n *= 1024;
+        }
+        return max(0, $n);
+    }
+
+    /** Максимальний розмір POST-запиту на цьому хостингу (байти, 0 — невідомо). */
+    public static function postMaxBytes(): int
+    {
+        return self::iniBytes((string)ini_get('post_max_size'));
+    }
+
     /** @return array<int,string> */
     public static function allowedExtensions(): array
     {

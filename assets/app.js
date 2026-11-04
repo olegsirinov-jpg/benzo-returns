@@ -341,20 +341,78 @@
     if (e.dataTransfer && e.dataTransfer.files) { addFiles(e.dataTransfer.files); }
   });
 
+  // Фото з телефона важать 3–6 MB кожне. Кілька таких перевищують ліміт хостингу,
+  // і сервер отримує порожню форму. Тому стискаємо прямо в браузері до того ж
+  // розміру, що й на сервері (1800 px по довшій стороні) — якість не втрачається.
+  var MAX_SIDE = 1800;
+  var pending  = 0;
+  var postMax  = parseInt(form.getAttribute('data-post-max') || '0', 10) || 0;
+  var busyEl   = document.createElement('div');
+  busyEl.className = 'hint hidden';
+  busyEl.textContent = 'Обробляємо фото…';
+  list.parentNode.insertBefore(busyEl, list);
+
+  function compressImage(f) {
+    return new Promise(function (resolve) {
+      var canvas = document.createElement('canvas');
+      if (!window.URL || !canvas.toBlob) { resolve(f); return; } // старий браузер — як є
+      var url = URL.createObjectURL(f);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          var scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+          canvas.width  = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff';                       // прозорий PNG -> білий фон
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            URL.revokeObjectURL(url);
+            if (!blob || blob.size >= f.size) { resolve(f); return; } // стиснення не допомогло
+            try {
+              resolve(new File([blob], f.name.replace(/\.[^.]+$/, '') + '.jpg',
+                               { type: 'image/jpeg', lastModified: Date.now() }));
+            } catch (e) { resolve(f); }
+          }, 'image/jpeg', 0.85);
+        } catch (e) { URL.revokeObjectURL(url); resolve(f); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(f); };
+      img.src = url;
+    });
+  }
+
   function addFiles(fileList) {
+    var queue = [];
     Array.prototype.forEach.call(fileList, function (f) {
-      if (files.length >= 20) { return; }
+      if (files.length + pending + queue.length >= 20) { return; }
       if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
         alert('Файл «' + f.name + '» має недопустимий формат. Дозволені: jpg, png, webp.');
         return;
       }
-      if (f.size > 10 * 1024 * 1024) {
-        alert('Файл «' + f.name + '» більший за 10 MB.');
-        return;
-      }
-      files.push({ file: f, type: guessType(files.length) });
+      queue.push(f);
     });
-    render();
+    if (!queue.length) { render(); return; }
+
+    pending += queue.length;
+    busyEl.classList.remove('hidden');
+    // по черзі — зберігаємо порядок і не перевантажуємо памʼять телефона
+    queue.reduce(function (chain, f) {
+      return chain.then(function () {
+        return compressImage(f).then(function (out) {
+          pending--;
+          if (out.size > 10 * 1024 * 1024) {
+            alert('Файл «' + f.name + '» більший за 10 MB навіть після стиснення.');
+          } else {
+            files.push({ file: out, type: guessType(files.length) });
+          }
+          render();
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      if (pending <= 0) { busyEl.classList.add('hidden'); }
+    });
   }
 
   function guessType(index) {
@@ -433,7 +491,26 @@
 
   // ---------------------------------------------------------------- сабміт
   form.addEventListener('submit', function (e) {
+    if (pending > 0) {
+      e.preventDefault();
+      alert('Зачекайте кілька секунд — фото ще обробляються.');
+      return;
+    }
+
     var problems = [];
+
+    // Сумарний розмір фото не має перевищувати ліміт хостингу (із запасом на інші поля)
+    if (postMax > 0) {
+      var sent = (typeof DataTransfer === 'undefined')
+        ? Array.prototype.slice.call(input.files || [])          // старий браузер шле оригінали
+        : files.map(function (x) { return x.file; });
+      var total = sent.reduce(function (s, x) { return s + (x.size || 0); }, 0);
+      var limit = postMax * 0.9;
+      if (total > limit) {
+        problems.push('Фото завеликі сумарно (' + (total / 1048576).toFixed(1) + ' MB, допустимо до '
+          + (limit / 1048576).toFixed(0) + ' MB). Приберіть кілька фото.');
+      }
+    }
 
     if (!$('#order_number').value.trim()) { problems.push('Вкажіть номер замовлення.'); }
     if (!normalizePhone($('#phone').value)) { problems.push('Вкажіть коректний телефон.'); }
@@ -489,9 +566,8 @@
       return;
     }
 
-    // Заявка пішла — чернетка більше не потрібна. Якщо сервер відхилить,
-    // поля повернуться через old() на боці PHP.
-    draftClear();
+    // Чернетку НЕ стираємо тут: якщо відправка зірветься (звʼязок, ліміт),
+    // клієнт не втратить уже введене. Її очищає сторінка «Заявку прийнято».
 
     var btn = $('#submit-btn');
     btn.disabled = true;

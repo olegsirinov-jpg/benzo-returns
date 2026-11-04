@@ -35,6 +35,7 @@ $autoLookup = !empty($prefill) && ($prefill['phone'] ?? '') !== '' && empty($res
 <form id="rma-form" method="post" action="<?= e(url('/returns/submit')) ?>"
       data-lookup-url="<?= e(url('/returns/lookup')) ?>"
       <?php if ($autoLookup): ?>data-autolookup="1"<?php endif; ?>
+      data-post-max="<?= (int)App\Upload::postMaxBytes() ?>"
       <?php if (!empty($restore)): ?>data-restore="<?= e(json_encode($restore, JSON_UNESCAPED_UNICODE)) ?>"<?php endif; ?>
       enctype="multipart/form-data" novalidate>
 <?= App\Csrf::field() ?>
