@@ -109,14 +109,33 @@ $comments = $comments ?? [];
 
     <?php
     // Реквізити потрібні, якщо обрано повернення коштів, а їх ще немає
+    // або менеджер попросив виправити окреме поле (воно очищене).
+    $rdMissing = [];
+    if (empty($rma['refund_name']))   { $rdMissing[] = 'ПІБ отримувача'; }
+    if (empty($rma['refund_tax_id'])) { $rdMissing[] = 'ІПН (РНОКПП)'; }
+    if (empty($rma['refund_iban']))   { $rdMissing[] = 'IBAN'; }
     $needRefundDetails = $action === 'refund'
-        && empty($rma['refund_iban'])
+        && $rdMissing !== []
         && !in_array($status, ['refunded', 'closed', 'cancelled', 'rejected'], true);
+    // частину реквізитів уже вказано — значить, менеджер просить уточнити решту
+    $rdPartial = $needRefundDetails && count($rdMissing) < 3;
+    // що вже є — підставляємо, щоб клієнт виправляв лише потрібне
+    $rdVal = function (string $field) use ($rma): string {
+        $o = old($field);
+        return $o !== '' ? (string)$o : (string)($rma[$field] ?? '');
+    };
     ?>
     <?php if ($needRefundDetails): ?>
         <div class="card">
             <h2 class="mt0">Реквізити для повернення коштів</h2>
-            <p>Щоб ми повернули кошти, вкажіть, будь ласка, реквізити вашого <strong>рахунку</strong>.</p>
+            <?php if ($rdPartial): ?>
+                <div class="alert alert--warn" style="margin-top:0">
+                    Щоб ми повернули кошти, уточніть, будь ласка: <strong><?= e(implode(', ', $rdMissing)) ?></strong>.
+                    Інші дані вже заповнені — перевірте їх і натисніть «Надіслати реквізити».
+                </div>
+            <?php else: ?>
+                <p>Щоб ми повернули кошти, вкажіть, будь ласка, реквізити вашого <strong>рахунку</strong>.</p>
+            <?php endif; ?>
 
             <details class="help">
                 <summary>Де взяти ці реквізити?</summary>
@@ -138,22 +157,24 @@ $comments = $comments ?? [];
                 <div class="grid2">
                     <div class="field">
                         <label class="label" for="rd_name">ПІБ отримувача <span class="req">*</span></label>
-                        <input class="input" type="text" id="rd_name" name="refund_name" value="<?= e(old('refund_name')) ?>">
+                        <input class="input" type="text" id="rd_name" name="refund_name" value="<?= e($rdVal('refund_name')) ?>">
                     </div>
                     <div class="field">
                         <label class="label" for="rd_tax">ІПН / РНОКПП <span class="req">*</span></label>
-                        <input class="input" type="text" id="rd_tax" name="refund_tax_id" value="<?= e(old('refund_tax_id')) ?>" inputmode="numeric">
+                        <input class="input" type="text" id="rd_tax" name="refund_tax_id" value="<?= e($rdVal('refund_tax_id')) ?>" inputmode="numeric"
+                               <?= empty($rma['refund_tax_id']) && $rdPartial ? 'autofocus' : '' ?>>
+                        <div class="hint">10 цифр — є в Дії (розділ «Документи» → картка платника податків) або в довідці з податкової.</div>
                     </div>
                 </div>
                 <div class="field">
                     <label class="label" for="rd_iban">IBAN <span class="req">*</span></label>
                     <input class="input mono" type="text" id="rd_iban" name="refund_iban"
-                           value="<?= e(old('refund_iban')) ?>" placeholder="UA00 0000 0000 0000 0000 0000 00000" spellcheck="false">
+                           value="<?= e($rdVal('refund_iban')) ?>" placeholder="UA00 0000 0000 0000 0000 0000 00000" spellcheck="false">
                     <div class="hint">Це <strong>не номер картки</strong>, а рахунок у форматі UA…</div>
                 </div>
                 <div class="field">
                     <label class="label" for="rd_bank">Назва банку <span class="muted">(необовʼязково)</span></label>
-                    <input class="input" type="text" id="rd_bank" name="refund_bank" value="<?= e(old('refund_bank')) ?>">
+                    <input class="input" type="text" id="rd_bank" name="refund_bank" value="<?= e($rdVal('refund_bank')) ?>">
                 </div>
                 <button class="btn" type="submit">Надіслати реквізити</button>
             </form>

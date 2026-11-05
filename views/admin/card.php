@@ -426,6 +426,36 @@ $canReject = App\Workflow::canReject($status);
                     <p class="hint">Коментар клієнта: <?= e($rma['refund_comment']) ?></p>
                 <?php endif; ?>
 
+                <?php
+                // Перевірка вже введених реквізитів (напр. ІПН із самих нулів)
+                $badTax  = !empty($rma['refund_tax_id']) && App\Validate::taxId((string)$rma['refund_tax_id']) === null;
+                $badIban = !empty($rma['refund_iban'])   && App\Validate::iban((string)$rma['refund_iban']) === null;
+                $hasAnyRd = !empty($rma['refund_tax_id']) || !empty($rma['refund_iban']) || !empty($rma['refund_name']);
+                ?>
+                <?php if ($badTax || $badIban): ?>
+                    <div class="alert alert--error" style="margin:12px 0 0">
+                        ⚠ <?= $badTax ? 'ІПН (РНОКПП) некоректний' : '' ?><?= $badTax && $badIban ? ', ' : '' ?><?= $badIban ? 'IBAN некоректний' : '' ?>
+                        — виплатити за такими реквізитами не вийде. Попросіть клієнта виправити кнопкою нижче.
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($hasAnyRd): ?>
+                    <div class="subblock" style="margin-top:12px;border-left-color:var(--amber)">
+                        <div class="subblock__title" style="margin-bottom:8px">Реквізити неправильні? Попросіть клієнта виправити</div>
+                        <div style="display:flex;gap:14px;flex-wrap:wrap">
+                            <label class="check mb0"><input type="checkbox" name="fix_fields[]" value="tax" <?= $badTax ? 'checked' : '' ?>><span>ІПН</span></label>
+                            <label class="check mb0"><input type="checkbox" name="fix_fields[]" value="iban" <?= $badIban ? 'checked' : '' ?>><span>IBAN</span></label>
+                            <label class="check mb0"><input type="checkbox" name="fix_fields[]" value="name"><span>ПІБ</span></label>
+                        </div>
+                        <button type="submit" class="btn btn--sm mt16" formnovalidate
+                                formaction="<?= e(url('/admin/rma/' . $id . '/refund-fix')) ?>"
+                                onclick="return confirm('Позначені поля буде очищено, а клієнт отримає SMS/Viber і лист з посиланням, щоб їх виправити. Продовжити?')">
+                            Запросити виправлення в клієнта
+                        </button>
+                        <div class="hint">Клієнт побачить форму, де правильні дані вже заповнені — виправить лише позначене. Старі значення лишаться в історії.</div>
+                    </div>
+                <?php endif; ?>
+
                 <?php if (!empty($rma['refund_iban'])): ?>
                     <div class="btn-row" style="margin-top:14px;align-items:center">
                         <button type="submit" class="btn btn--sm btn--ghost"
@@ -830,6 +860,8 @@ $canReject = App\Workflow::canReject($status);
                     'approved' => 'Повернення погоджено', 'received' => 'Товар отримано',
                     'refunded' => 'Кошти повернено', 'rejected' => 'Відмову',
                     'manual_sms' => 'Повідомлення менеджера',
+                    'refund_fix' => 'Запит виправити реквізити',
+                    'ttn_reminder' => 'Нагадування про ТТН',
                 ];
                 ?>
                 <table class="table">

@@ -551,7 +551,7 @@
       var ib = $('#refund_iban').value.replace(/\s/g, '');
       if (!/^UA\d{27}$/.test(ib)) { problems.push('IBAN має починатися з UA і містити 29 символів.'); }
       var tax = $('#refund_tax_id').value.replace(/\D/g, '');
-      if (tax.length !== 10 && tax.length !== 8) { problems.push('ІПН/РНОКПП — 10 цифр, ЄДРПОУ — 8.'); }
+      if (!validTaxId(tax)) { problems.push('ІПН (РНОКПП) некоректний — перевірте цифри. Це 10 цифр, як у Дії чи довідці з податкової (для ФОП/юрособи — ЄДРПОУ, 8 цифр).'); }
     }
 
     if (!$('input[name="confirm_rules"]').checked) {
@@ -575,6 +575,18 @@
   });
 
   // ---------------------------------------------------------------- утиліти
+  // ІПН (РНОКПП, 10 цифр, з контрольною цифрою) або ЄДРПОУ (8 цифр). Як Validate::taxId на сервері.
+  function validTaxId(d) {
+    if (d.length !== 10 && d.length !== 8) { return false; }
+    if (/^(\d)\1+$/.test(d)) { return false; }               // 0000000000 тощо
+    if (d.length === 10) {
+      var w = [-1, 5, 7, 9, 4, 6, 10, 5, 7], s = 0;
+      for (var i = 0; i < 9; i++) { s += parseInt(d[i], 10) * w[i]; }
+      return ((((s % 11) + 11) % 11) % 10) === parseInt(d[9], 10);
+    }
+    return true;
+  }
+
   function esc(s) {
     return String(s === null || s === undefined ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

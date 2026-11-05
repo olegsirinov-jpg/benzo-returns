@@ -255,7 +255,14 @@ class AdminController
             $data['refund_name']   = Validate::text((string)($_POST['refund_name'] ?? ''), 190) ?: null;
             $iban                  = trim((string)($_POST['refund_iban'] ?? ''));
             $data['refund_iban']   = $iban === '' ? null : Validate::iban($iban);
-            $data['refund_tax_id'] = Validate::taxId((string)($_POST['refund_tax_id'] ?? ''));
+            $taxRaw = trim((string)($_POST['refund_tax_id'] ?? ''));
+            $data['refund_tax_id'] = $taxRaw === '' ? null : Validate::taxId($taxRaw);
+            if ($taxRaw !== '' && $data['refund_tax_id'] === null) {
+                // не зберігаємо некоректне, лишаємо як було — і підказуємо, що робити
+                unset($data['refund_tax_id']);
+                Session::flash('error', 'ІПН (РНОКПП) некоректний — поле не змінено. '
+                    . 'Попросіть клієнта уточнити кнопкою «Запросити виправлення» в блоці реквізитів.');
+            }
             $data['refund_bank']   = Validate::text((string)($_POST['refund_bank'] ?? ''), 190) ?: null;
 
             $amount = str_replace([' ', ','], ['', '.'], (string)($_POST['refund_amount'] ?? ''));
@@ -1646,6 +1653,78 @@ class AdminController
                 . ' (замовлення №' . $order . ').')
             : Session::flash('error', 'Не вдалося надіслати: ' . $r['error'] . '. Посилання для ручної відправки: ' . $link);
         Response::redirect('/admin');
+    }
+
+    /**
+     * Попросити клієнта виправити реквізити: обрані поля очищаються, клієнт отримує
+     * SMS/Viber і email із посиланням, а на сторінці статусу бачить форму, де правильні
+     * дані вже заповнені, а виправити треба лише позначене.
+     */
+    public function requestRefundFix(string $id): void
+    {
+        Csrf::verify();
+        $rmaId = (int)$id;
+        $rma   = Rma::find($rmaId);
+        if ($rma === null) {
+            Response::redirect('/admin');
+            return;
+        }
+
+        $map = [
+            'tax'  => ['refund_tax_id', 'ІПН (РНОКПП)'],
+            'iban' => ['refund_iban',   'IBAN'],
+            'name' => ['refund_name',   'ПІБ отримувача'],
+        ];
+        $sel = $_POST['fix_fields'] ?? [];
+        if (!is_array($sel)) {
+            $sel = [];
+        }
+        $clear  = [];
+        $labels = [];
+        foreach ($map as $key => $def) {
+            if (in_array($key, $sel, true)) {
+                $clear[$def[0]] = null;
+                $labels[]       = $def[1];
+                // старе значення лишаємо в історії, щоб нічого не загубилось
+                Rma::log($rmaId, 'Реквізити: ' . $def[1], (string)($rma[$def[0]] ?? ''), '— (попросили клієнта виправити)');
+            }
+        }
+        if ($clear === []) {
+            Session::flash('error', 'Позначте, що саме клієнт має виправити (ІПН, IBAN чи ПІБ).');
+            Response::redirect('/admin/rma/' . $rmaId);
+        }
+
+        $clear['updated_at'] = date('Y-m-d H:i:s');
+        Db::update('rma', $clear, 'id = ?', [$rmaId]);
+
+        $what    = implode(', ', $labels);
+        $comment = 'Для повернення коштів уточніть, будь ласка: ' . $what
+                 . '. Форма — на цій сторінці нижче, інші дані вже заповнені.';
+
+        // Статус «Очікуємо реквізити» — лише на етапі після отримання товару,
+        // щоб не збити процес відправки, якщо товар ще не приїхав.
+        $status = (string)$rma['status'];
+        if (in_array($status, ['received', 'inspection', 'refund_approved', 'refund_pending'], true)) {
+            Rma::setStatus($rmaId, 'waiting_payment_details', $comment);
+        } else {
+            Rma::comment($rmaId, $comment, 'client');
+            Db::update('rma', ['client_message' => $comment], 'id = ?', [$rmaId]);
+        }
+
+        $fresh = Rma::find($rmaId) ?? $rma;
+        $sent  = \App\Notify::refundFix($fresh, $what);
+        $via   = [];
+        if ($sent['sms']) {
+            $via[] = 'SMS/Viber';
+        }
+        if ($sent['email']) {
+            $via[] = 'email';
+        }
+        $via !== []
+            ? Session::flash('success', 'Клієнта попрошено уточнити: ' . $what . '. Надіслано: ' . implode(' і ', $via) . '.')
+            : Session::flash('error', 'Поля очищено, але повідомлення не надіслано (SMS не налаштовано і немає email). '
+                . 'Надішліть клієнту посилання вручну: ' . Rma::publicUrl($fresh));
+        Response::redirect('/admin/rma/' . $rmaId);
     }
 
     /** Надіслати менеджеру в Telegram список посилок до отримання. */

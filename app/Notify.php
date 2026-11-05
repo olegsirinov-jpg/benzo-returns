@@ -182,6 +182,53 @@ class Notify
     }
 
     /**
+     * Прохання клієнту виправити реквізити для повернення коштів (менеджер натиснув кнопку).
+     * Шле SMS/Viber і email — що з цього налаштовано. Кожна відправка логується.
+     *
+     * @param array<string,mixed> $rma
+     * @return array{sms:bool,email:bool}
+     */
+    public static function refundFix(array $rma, string $what): array
+    {
+        $number = (string)$rma['rma_number'];
+        $link   = Rma::publicUrl($rma);
+        $res    = ['sms' => false, 'email' => false];
+
+        if (!empty($rma['phone']) && TurboSms::enabled()) {
+            $r = self::sendSms($rma, 'Повернення ' . $number . ': щоб ми виплатили кошти, уточніть, будь ласка, '
+                . $what . ' за посиланням (інші дані вже заповнені): ' . $link);
+            $res['sms'] = $r['ok'];
+        }
+
+        if (!empty($rma['email'])) {
+            $tpl = self::pack(
+                'Уточніть реквізити — ' . $number,
+                'Потрібно уточнити реквізити для повернення коштів.',
+                'У вказаних реквізитах некоректно: <b>' . e($what) . '</b>. '
+                . 'Будь ласка, перейдіть за посиланням і виправте — інші дані вже заповнені, це займе хвилину.',
+                $link,
+                ''
+            );
+            try {
+                $r = Mailer::send((string)$rma['email'], (string)($rma['customer_name'] ?? ''), $tpl['subject'], $tpl['html']);
+            } catch (\Throwable $e) {
+                $r = ['ok' => false, 'error' => $e->getMessage()];
+            }
+            Db::insert('notifications', [
+                'rma_id'     => (int)$rma['id'],
+                'event'      => 'refund_fix',
+                'channel'    => 'email',
+                'recipient'  => mb_substr((string)$rma['email'], 0, 190),
+                'status'     => $r['ok'] ? 'sent' : 'failed',
+                'detail'     => $r['ok'] ? null : mb_substr((string)$r['error'], 0, 255),
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+            $res['email'] = $r['ok'];
+        }
+        return $res;
+    }
+
+    /**
      * Ручна відправка SMS/Viber менеджером. Логує результат.
      *
      * @param array<string,mixed> $rma

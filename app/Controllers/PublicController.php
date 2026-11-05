@@ -283,7 +283,7 @@ class PublicController
             }
             $refund['tax'] = Validate::taxId((string)($post['refund_tax_id'] ?? ''));
             if ($refund['tax'] === null) {
-                $errors['refund_tax_id'] = 'ІПН/РНОКПП має містити 10 цифр, ЄДРПОУ — 8.';
+                $errors['refund_tax_id'] = 'ІПН (РНОКПП) некоректний — перевірте цифри. Це 10 цифр, як у Дії чи довідці з податкової (для ФОП/юрособи — ЄДРПОУ, 8 цифр).';
             }
             $refund['bank']    = Validate::text((string)($post['refund_bank'] ?? ''), 190);
             $refund['comment'] = Validate::text((string)($post['refund_comment'] ?? ''), 1000);
@@ -582,7 +582,7 @@ class PublicController
             $errors[] = 'IBAN має починатися з UA і містити 29 символів. Це не номер картки, а рахунок.';
         }
         if ($tax === null) {
-            $errors[] = 'ІПН/РНОКПП — 10 цифр, ЄДРПОУ — 8.';
+            $errors[] = 'ІПН (РНОКПП) некоректний — перевірте цифри. Це 10 цифр, як у Дії чи довідці з податкової (для ФОП/юрособи — ЄДРПОУ, 8 цифр).';
         }
         if ($errors !== []) {
             Session::flash('error', implode(' ', $errors));
@@ -599,6 +599,16 @@ class PublicController
         ], 'id = ?', [$rmaId]);
 
         Rma::log($rmaId, 'Реквізити', null, 'IBAN ' . $iban, 'Клієнт вказав реквізити', null, 'Клієнт');
+
+        // менеджер одразу дізнається, що можна виплачувати
+        try {
+            if (Telegram::enabled()) {
+                Telegram::send('💳 <b>Клієнт вказав / виправив реквізити</b> — ' . e((string)$rma['rma_number'])
+                    . "\nМожна оформлювати повернення коштів.\n" . Rma::adminUrl($rmaId));
+            }
+        } catch (\Throwable $e) {
+            error_log('Telegram: ' . $e->getMessage());
+        }
 
         // якщо чекали реквізити — рухаємо статус далі
         if ((string)$rma['status'] === 'waiting_payment_details') {

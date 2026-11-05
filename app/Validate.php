@@ -92,6 +92,10 @@ class Validate
     /**
      * ІПН/РНОКПП (10 цифр) або ЄДРПОУ (8 цифр).
      */
+    /**
+     * ІПН (РНОКПП, 10 цифр) або ЄДРПОУ (8 цифр).
+     * Відсіюємо «заглушки» на кшталт 0000000000 і перевіряємо контрольну цифру РНОКПП.
+     */
     public static function taxId(string $raw): ?string
     {
         $d = preg_replace('/\D+/', '', $raw);
@@ -99,7 +103,33 @@ class Validate
             return null;
         }
         $len = strlen($d);
-        return ($len === 8 || $len === 10) ? $d : null;
+        if ($len !== 8 && $len !== 10) {
+            return null;
+        }
+        // усі цифри однакові (0000000000, 1111111111…) — не справжній код
+        if (preg_match('/^(\d)\1+$/', $d)) {
+            return null;
+        }
+        if ($len === 10 && !self::rnokppChecksum($d)) {
+            return null;
+        }
+        return $d;
+    }
+
+    /**
+     * Контрольна цифра РНОКПП: ваги (-1,5,7,9,4,6,10,5,7), сума mod 11 mod 10 = 10-та цифра.
+     */
+    public static function rnokppChecksum(string $d): bool
+    {
+        if (!preg_match('/^\d{10}$/', $d)) {
+            return false;
+        }
+        $w = [-1, 5, 7, 9, 4, 6, 10, 5, 7];
+        $s = 0;
+        for ($i = 0; $i < 9; $i++) {
+            $s += (int)$d[$i] * $w[$i];
+        }
+        return ((($s % 11) + 11) % 11) % 10 === (int)$d[9];
     }
 
     public static function email(string $raw): ?string
