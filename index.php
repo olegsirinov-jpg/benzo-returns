@@ -43,6 +43,7 @@ $router->post('/admin/rma/{id}/save', 'AdminController@save');
 $router->post('/admin/rma/{id}/status', 'AdminController@changeStatus');
 $router->post('/admin/rma/{id}/comment', 'AdminController@addComment');
 $router->post('/admin/rma/{id}/photo', 'AdminController@addPhoto');
+$router->post('/admin/rma/{id}/photo-visible', 'AdminController@photoVisible');
 $router->post('/admin/rma/{id}/sms', 'AdminController@sendSms');
 $router->get('/admin/rma/{id}/np-address', 'AdminController@npClientAddress');
 $router->get('/admin/rma/{id}/np-price', 'AdminController@npPrice');

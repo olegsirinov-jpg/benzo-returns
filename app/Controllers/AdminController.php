@@ -412,6 +412,24 @@ class AdminController
         Response::redirect('/admin/rma/' . $rmaId);
     }
 
+    /** Показати / сховати фото на сторінці статусу клієнта. */
+    public function photoVisible(string $id): void
+    {
+        Csrf::verify();
+        $rmaId   = (int)$id;
+        $photoId = (int)($_POST['photo_id'] ?? 0);
+        $visible = !empty($_POST['visible']) ? 1 : 0;
+        if (Rma::find($rmaId) === null || $photoId <= 0) {
+            Response::redirect('/admin');
+            return;
+        }
+        // лише фото саме цієї заявки
+        Db::run('UPDATE rma_photos SET client_visible = ? WHERE id = ? AND rma_id = ?', [$visible, $photoId, $rmaId]);
+        Rma::log($rmaId, 'Фото для клієнта', null, $visible ? 'показано клієнту' : 'приховано від клієнта');
+        Session::flash('success', $visible ? 'Фото тепер видно клієнту на сторінці статусу.' : 'Фото приховано від клієнта.');
+        Response::redirect('/admin/rma/' . $rmaId . '#photos');
+    }
+
     public function addPhoto(string $id): void
     {
         Csrf::verify();
@@ -443,6 +461,7 @@ class AdminController
                     'orig_name'   => mb_substr($file['name'], 0, 255),
                     'size'        => $file['size'],
                     'uploaded_by' => 'manager',
+                    'client_visible' => !empty($_POST['client_visible']) ? 1 : 0,
                     'created_at'  => date('Y-m-d H:i:s'),
                 ]);
                 $saved++;
@@ -1683,6 +1702,7 @@ class AdminController
                     'orig_name'   => mb_substr($file['name'], 0, 255),
                     'size'        => $file['size'],
                     'uploaded_by' => 'manager',
+                    'client_visible' => !empty($_POST['photos_client_visible']) ? 1 : 0,
                     'created_at'  => date('Y-m-d H:i:s'),
                 ]);
                 $photoCount++;

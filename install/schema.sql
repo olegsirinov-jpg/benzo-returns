@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS `rma_photos` (
   `orig_name` VARCHAR(255) NULL,
   `size` INT UNSIGNED NULL,
   `uploaded_by` VARCHAR(20) NOT NULL DEFAULT 'client',
+  `client_visible` TINYINT(1) NOT NULL DEFAULT 0,
   `created_at` DATETIME NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_photos_rma` (`rma_id`),

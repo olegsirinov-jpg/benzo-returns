@@ -505,6 +505,7 @@ class PublicController
                     'rma'      => $rma,
                     'items'    => Rma::items($rmaId),
                     'comments' => Rma::comments($rmaId, 'client'),
+                    'clientPhotos' => Rma::clientPhotos($rmaId),
                 ]);
                 return;
             }
@@ -544,6 +545,7 @@ class PublicController
             'rma'      => $rma,
             'items'    => Rma::items((int)$rma['id']),
             'comments' => Rma::comments((int)$rma['id'], 'client'),
+            'clientPhotos' => Rma::clientPhotos((int)$rma['id']),
         ]);
     }
 

@@ -12,7 +12,7 @@ namespace App;
  */
 class Schema
 {
-    const TARGET_VERSION = 8;
+    const TARGET_VERSION = 9;
 
     public static function ensure(): void
     {
@@ -46,6 +46,9 @@ class Schema
         }
         if ($current < 8) {
             self::migrateV8();
+        }
+        if ($current < 9) {
+            self::migrateV9();
         }
 
         Db::run(
@@ -188,6 +191,17 @@ class Schema
              ) WHERE approved_at IS NULL",
             [Dict::status('approved')]
         );
+    }
+
+    /**
+     * v9: фото, які менеджер дозволив показати клієнту на сторінці статусу.
+     */
+    private static function migrateV9(): void
+    {
+        $db = Env::str('DB_NAME');
+        if (!self::columnExists($db, 'rma_photos', 'client_visible')) {
+            Db::run('ALTER TABLE `rma_photos` ADD COLUMN `client_visible` TINYINT(1) NOT NULL DEFAULT 0 AFTER `uploaded_by`');
+        }
     }
 
     private static function columnExists(string $db, string $table, string $column): bool

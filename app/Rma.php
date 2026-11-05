@@ -93,6 +93,20 @@ class Rma
         return Db::all('SELECT * FROM rma_photos WHERE rma_id = ? ORDER BY id', [$rmaId]);
     }
 
+    /**
+     * Фото, які менеджер дозволив показати клієнту (напр. докази при відмові).
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function clientPhotos(int $rmaId): array
+    {
+        try {
+            return Db::all('SELECT * FROM rma_photos WHERE rma_id = ? AND client_visible = 1 ORDER BY id', [$rmaId]);
+        } catch (\Throwable $e) {
+            return []; // міграція v9 ще не пройшла
+        }
+    }
+
     /** @return array<int,array<string,mixed>> */
     public static function history(int $rmaId): array
     {

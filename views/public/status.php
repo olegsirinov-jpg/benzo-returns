@@ -430,6 +430,23 @@ $comments = $comments ?? [];
         </div>
     <?php endif; ?>
 
+    <?php $clientPhotos = $clientPhotos ?? []; ?>
+    <?php if ($clientPhotos !== []): ?>
+        <div class="card">
+            <h2 class="mt0">Фото від магазину</h2>
+            <p class="small muted">Натисніть на фото, щоб відкрити його в повному розмірі.</p>
+            <div class="photos">
+                <?php foreach ($clientPhotos as $p): ?>
+                    <div class="photo">
+                        <a href="<?= e(url('/uploads/' . $p['file'])) ?>" target="_blank" rel="noopener">
+                            <img src="<?= e(url('/uploads/' . $p['file'])) ?>" alt="Фото" loading="lazy">
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <script>
     // Миттєва перевірка: не дати вписати ТТН, з якою клієнт отримував замовлення
     (function () {

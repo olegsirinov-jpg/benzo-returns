@@ -208,7 +208,11 @@ $canReject = App\Workflow::canReject($status);
                 </div>
             <?php endif; ?>
 
-            <h3>Фото від клієнта</h3>
+            <h3 id="photos">Фото</h3>
+            <p class="small muted" style="margin-top:-4px">
+                Клієнт бачить на сторінці статусу лише фото з позначкою «👁 видно клієнту»
+                (напр. докази при відмові). Решта — лише для персоналу.
+            </p>
             <?php if ($photos === []): ?>
                 <p class="muted small">Фото немає.</p>
             <?php else: ?>
@@ -222,6 +226,17 @@ $canReject = App\Workflow::canReject($status);
                                 <?= e(App\Dict::photoTypes()[(string)$p['type']] ?? 'Фото') ?>
                                 <?= $p['uploaded_by'] === 'manager' ? ' <span class="muted">(менеджер)</span>' : '' ?>
                             </div>
+                            <?php $vis = !empty($p['client_visible']); ?>
+                            <form method="post" action="<?= e(url('/admin/rma/' . $id . '/photo-visible')) ?>" style="margin-top:4px;text-align:center">
+                                <?= $token ?>
+                                <input type="hidden" name="photo_id" value="<?= (int)$p['id'] ?>">
+                                <input type="hidden" name="visible" value="<?= $vis ? '0' : '1' ?>">
+                                <button type="submit" class="btn btn--sm <?= $vis ? 'btn--green' : 'btn--ghost' ?>"
+                                        style="padding:3px 7px;font-size:11px"
+                                        title="<?= $vis ? 'Натисніть, щоб приховати від клієнта' : 'Натисніть, щоб показати клієнту на сторінці статусу' ?>">
+                                    <?= $vis ? '👁 видно клієнту' : 'Показати клієнту' ?>
+                                </button>
+                            </form>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -238,6 +253,10 @@ $canReject = App\Workflow::canReject($status);
                     </select>
                     <button class="btn btn--sm btn--ghost" type="submit">Додати фото</button>
                 </div>
+                <label class="check mb0" style="margin-top:8px">
+                    <input type="checkbox" name="client_visible" value="1">
+                    <span>Показати ці фото клієнту на сторінці статусу</span>
+                </label>
             </form>
         </div>
 
@@ -896,7 +915,11 @@ $canReject = App\Workflow::canReject($status);
                     <div class="field">
                         <label class="label">Фото проблеми <span class="muted">(необовʼязково)</span></label>
                         <input class="input" type="file" name="photos[]" accept="image/*" multiple style="max-width:280px;padding:6px">
-                        <div class="hint">Покажіть, що саме не так. Фото зберігаються в картці й видимі лише персоналу.</div>
+                        <div class="hint">Покажіть, що саме не так. За замовчуванням фото бачить лише персонал.</div>
+                        <label class="check mb0" style="margin-top:6px">
+                            <input type="checkbox" name="photos_client_visible" value="1">
+                            <span>Показати ці фото клієнту (напр. як доказ при відмові)</span>
+                        </label>
                     </div>
                     <button class="btn btn--sm" type="submit">Позначити проблему і сповістити</button>
                 </form>
